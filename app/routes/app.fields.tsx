@@ -13,7 +13,6 @@ import {
   EmptyState,
   FormLayout,
   IndexTable,
-  InlineGrid,
   InlineStack,
   Layout,
   Page,
@@ -25,7 +24,6 @@ import { authenticate } from "../shopify.server";
 import {
   deleteCustomField,
   listCustomFields,
-  parseOptionsRaw,
   upsertCustomField,
   type FieldDescriptor,
 } from "../lib/customField.server";
@@ -284,8 +282,3 @@ function FieldForm({
   );
 }
 
-// Re-export for any callers that expected this util alongside the page.
-export { parseOptionsRaw };
-
-// Polaris's <InlineGrid> import isn't used here directly but kept for parity with other settings tabs.
-void InlineGrid;
