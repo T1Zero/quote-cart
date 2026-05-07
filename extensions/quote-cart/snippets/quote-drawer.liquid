@@ -1,0 +1,62 @@
+{%- comment -%}
+  Quote Cart — slide-in drawer
+  Idempotent: rendered once per page even if multiple blocks include it.
+  Used by the launcher block and the navlink block.
+{%- endcomment -%}
+
+{%- unless quote_drawer_rendered -%}
+  {%- assign quote_drawer_rendered = true -%}
+
+  <div
+    id="qc-drawer-overlay"
+    class="qc-drawer-overlay"
+    aria-hidden="true"
+    tabindex="-1"
+  ></div>
+
+  <aside
+    id="qc-drawer"
+    class="qc-drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ 'drawer.your_quote' | t }}"
+    aria-hidden="true"
+    tabindex="-1"
+  >
+    <header class="qc-drawer-header">
+      <h2 class="qc-drawer-title">{{ 'drawer.your_quote' | t }}</h2>
+      <button
+        type="button"
+        class="qc-drawer-close"
+        id="qc-drawer-close"
+        aria-label="{{ 'popup.close' | t }}"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </header>
+
+    <div id="qc-drawer-empty" class="qc-drawer-empty" style="display:none">
+      <p>{{ 'drawer.empty' | t }}</p>
+    </div>
+
+    <div id="qc-drawer-items" class="qc-drawer-items" role="list"></div>
+
+    <footer class="qc-drawer-footer">
+      <div class="qc-drawer-subtotal">
+        <span>{{ 'drawer.subtotal' | t }}</span>
+        <span id="qc-drawer-subtotal" class="qc-drawer-subtotal-value">0.00</span>
+      </div>
+      <div class="qc-drawer-actions">
+        <button type="button" class="qc-btn qc-btn-secondary" id="qc-drawer-continue">
+          {{ 'drawer.continue_shopping' | t }}
+        </button>
+        <a class="qc-btn qc-btn-primary" id="qc-drawer-view" href="/apps/quote?lang={{ request.locale.iso_code | downcase | slice: 0, 2 }}">
+          {{ 'drawer.view_full_quote' | t }}
+        </a>
+      </div>
+    </footer>
+  </aside>
+{%- endunless -%}

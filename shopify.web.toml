@@ -1,0 +1,7 @@
+name = "remix"
+roles = ["frontend", "backend"]
+webhooks_path = "/webhooks"
+
+[commands]
+predev = "npm exec -- prisma generate && npm exec -- prisma migrate deploy"
+dev = "npm exec -- remix vite:dev"

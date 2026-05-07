@@ -1,0 +1,64 @@
+{%- comment -%}
+  Quote Cart — confirmation popup snippet
+  Rendered once per page (idempotent: the JS guards against duplicates).
+  Localized strings come from window.QUOTE_CART_STRINGS.
+{%- endcomment -%}
+
+{%- unless quote_popup_rendered -%}
+  {%- assign quote_popup_rendered = true -%}
+
+  <div
+    id="qc-popup-overlay"
+    class="qc-popup-overlay"
+    aria-hidden="true"
+    tabindex="-1"
+  ></div>
+
+  <div
+    id="qc-popup"
+    class="qc-popup"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="qc-popup-title"
+    aria-hidden="true"
+    tabindex="-1"
+  >
+    <button
+      type="button"
+      class="qc-popup-close"
+      id="qc-popup-close"
+      aria-label="{{ 'popup.close' | t }}"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <div class="qc-popup-body">
+      <div class="qc-popup-thumb-wrapper">
+        {%- comment -%} src filled in by JS — placeholder transparent gif keeps theme-check happy {%- endcomment -%}
+        <img
+          id="qc-popup-thumb"
+          class="qc-popup-thumb"
+          src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+          alt=""
+          width="96"
+          height="96"
+          loading="lazy"
+        />
+      </div>
+      <h2 id="qc-popup-title" class="qc-popup-title">{{ 'popup.added' | t }}</h2>
+      <p id="qc-popup-product" class="qc-popup-product"></p>
+      <p id="qc-popup-qty" class="qc-popup-qty"></p>
+      <div class="qc-popup-actions">
+        <button type="button" class="qc-btn qc-btn-secondary" id="qc-popup-continue">
+          {{ 'popup.continue_shopping' | t }}
+        </button>
+        <a class="qc-btn qc-btn-primary" id="qc-popup-view" href="/apps/quote?lang={{ request.locale.iso_code | downcase | slice: 0, 2 }}">
+          {{ 'popup.view_quote' | t }}
+        </a>
+      </div>
+    </div>
+  </div>
+{%- endunless -%}

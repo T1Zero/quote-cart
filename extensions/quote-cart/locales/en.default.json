@@ -1,0 +1,25 @@
+{
+  "block": {
+    "add_to_quote": "Add to Quote",
+    "quantity_label": "Quantity"
+  },
+  "popup": {
+    "added": "Product added to your quote",
+    "continue_shopping": "Continue Shopping",
+    "view_quote": "View Quote",
+    "close": "Close"
+  },
+  "drawer": {
+    "your_quote": "Your Quote",
+    "empty": "Your quote is empty.",
+    "subtotal": "Subtotal",
+    "view_full_quote": "View Full Quote",
+    "continue_shopping": "Continue Shopping",
+    "remove": "Remove",
+    "qty": "Quantity"
+  },
+  "launcher": {
+    "open": "Open quote",
+    "close": "Close quote"
+  }
+}

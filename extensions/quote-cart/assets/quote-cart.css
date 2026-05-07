@@ -1,0 +1,482 @@
+/* Quote Cart — storefront styles
+ * Scoped under .qc-* prefixes and CSS variables to avoid theme conflicts.
+ */
+
+:root {
+  --qc-radius: 12px;
+  --qc-bg: #ffffff;
+  --qc-bg-secondary: #fafafa;
+  --qc-fg: #1a1a1a;
+  --qc-fg-muted: #666666;
+  --qc-border: #ececec;
+  --qc-border-strong: #d6d6d6;
+  --qc-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --qc-shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.06);
+  --qc-accent: #111111;
+  --qc-on-accent: #ffffff;
+  --qc-danger: #d72c0d;
+}
+
+.qc-no-scroll {
+  overflow: hidden !important;
+}
+
+/* ----------------- Popup (post-add modal) ----------------- */
+.qc-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 999998;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.qc-popup-overlay.qc-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.qc-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  width: min(420px, calc(100vw - 32px));
+  background: var(--qc-bg);
+  border-radius: var(--qc-radius);
+  box-shadow: var(--qc-shadow);
+  padding: 28px 24px 24px;
+  z-index: 999999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.2, 1, 0.4, 1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+  color: var(--qc-fg);
+}
+.qc-popup.qc-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+.qc-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--qc-fg-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.qc-popup-close:hover {
+  background: #f3f3f3;
+  color: var(--qc-fg);
+}
+.qc-popup-body {
+  text-align: center;
+}
+.qc-popup-thumb-wrapper {
+  width: 96px;
+  height: 96px;
+  margin: 8px auto 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f3f3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.qc-popup-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.qc-popup-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.qc-popup-product {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--qc-fg-muted);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.qc-popup-qty {
+  margin: 0 0 22px;
+  font-size: 13px;
+  color: var(--qc-fg);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.qc-popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ----------------- Block-level quantity selector ----------------- */
+.qc-block-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 4px;
+}
+.qc-block-qty-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--qc-fg);
+  font-family: inherit;
+}
+.qc-block-stepper {
+  height: 40px;
+}
+.qc-block-stepper button {
+  width: 36px;
+  height: 38px;
+  font-size: 18px;
+}
+.qc-block-stepper input {
+  width: 50px;
+  height: 38px;
+  font-size: 14px;
+}
+
+/* ----------------- Buttons ----------------- */
+.qc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.qc-btn:active {
+  transform: scale(0.98);
+}
+.qc-btn-primary {
+  background: var(--qc-accent);
+  color: var(--qc-on-accent);
+}
+.qc-btn-primary:hover {
+  background: #000;
+}
+.qc-btn-secondary {
+  background: transparent;
+  color: var(--qc-fg);
+  border-color: var(--qc-border-strong);
+}
+.qc-btn-secondary:hover {
+  background: #f6f6f6;
+}
+
+/* ----------------- Floating launcher ----------------- */
+.qc-launcher {
+  position: fixed;
+  z-index: 999990;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.qc-corner-bottom-right {
+  bottom: 24px;
+  right: 24px;
+}
+.qc-corner-top-right {
+  top: 96px;
+  right: 24px;
+}
+.qc-launcher-hidden {
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+}
+.qc-launcher-btn {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--qc-accent);
+  color: var(--qc-on-accent);
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.18s cubic-bezier(0.2, 1, 0.4, 1), box-shadow 0.2s ease;
+}
+.qc-launcher-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+.qc-launcher-btn:active {
+  transform: scale(0.96);
+}
+.qc-launcher-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--qc-danger);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  padding: 0 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* ----------------- Drawer ----------------- */
+.qc-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 999996;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.qc-drawer-overlay.qc-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.qc-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: var(--qc-bg);
+  z-index: 999997;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.2, 1, 0.4, 1);
+  box-shadow: var(--qc-shadow);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--qc-fg);
+}
+.qc-drawer.qc-active {
+  transform: translateX(0);
+}
+.qc-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--qc-border);
+}
+.qc-drawer-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--qc-fg);
+  /* Win against the theme's <h2> styles */
+  opacity: 1;
+}
+.qc-drawer-close {
+  background: transparent;
+  border: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--qc-fg-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.qc-drawer-close:hover {
+  background: #f3f3f3;
+  color: var(--qc-fg);
+}
+.qc-drawer-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--qc-fg-muted);
+}
+.qc-drawer-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 12px;
+}
+.qc-drawer-item {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 12px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--qc-border);
+  position: relative;
+}
+.qc-drawer-item:last-child {
+  border-bottom: 0;
+}
+.qc-drawer-item-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--qc-bg-secondary);
+}
+.qc-drawer-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.qc-drawer-item-info {
+  min-width: 0;
+}
+.qc-drawer-item-title {
+  font-weight: 600;
+  font-size: 14px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qc-drawer-item-variant {
+  display: block;
+  font-size: 12px;
+  color: var(--qc-fg-muted);
+  margin-top: 2px;
+}
+.qc-drawer-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.qc-drawer-item-price {
+  font-weight: 600;
+  font-size: 14px;
+}
+.qc-drawer-item-remove {
+  background: transparent;
+  border: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--qc-fg-muted);
+  font-size: 18px;
+  line-height: 1;
+  align-self: flex-start;
+}
+.qc-drawer-item-remove:hover {
+  color: var(--qc-danger);
+  background: #fff5f3;
+}
+.qc-drawer-footer {
+  border-top: 1px solid var(--qc-border);
+  padding: 16px 20px 20px;
+  background: var(--qc-bg);
+}
+.qc-drawer-subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 14px;
+}
+.qc-drawer-actions {
+  display: flex;
+  gap: 10px;
+}
+.qc-drawer-actions .qc-btn {
+  flex: 1;
+}
+
+/* ----------------- Stepper (shared) ----------------- */
+.qc-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--qc-border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 32px;
+}
+.qc-stepper button {
+  border: 0;
+  background: var(--qc-bg-secondary);
+  width: 28px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--qc-fg);
+}
+.qc-stepper button:hover {
+  background: #f0f0f0;
+}
+.qc-stepper input {
+  width: 36px;
+  height: 30px;
+  border: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  -moz-appearance: textfield;
+  background: transparent;
+  color: var(--qc-fg);
+}
+.qc-stepper input::-webkit-outer-spin-button,
+.qc-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ----------------- Mobile ----------------- */
+@media (max-width: 640px) {
+  .qc-drawer {
+    width: 100vw;
+  }
+  .qc-popup {
+    width: calc(100vw - 24px);
+  }
+  .qc-popup-actions {
+    flex-direction: column;
+  }
+  .qc-popup-actions .qc-btn {
+    width: 100%;
+  }
+}
+
+/* ----------------- Reduced motion ----------------- */
+@media (prefers-reduced-motion: reduce) {
+  .qc-popup,
+  .qc-drawer,
+  .qc-popup-overlay,
+  .qc-drawer-overlay,
+  .qc-launcher,
+  .qc-launcher-btn,
+  .qc-btn {
+    transition: none !important;
+  }
+}

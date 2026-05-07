@@ -1,0 +1,7 @@
+api_version = "2025-01"
+uid = "9667fc37-af64-6445-48e5-615aa4e69d73240a447a"
+
+[[extensions]]
+name = "t:extension_name"
+handle = "quote-cart"
+type = "theme"

@@ -1,0 +1,362 @@
+{%- comment -%}
+  Quote Cart — Add-to-Quote button (theme app block)
+  Place this on the product page from the theme editor.
+  Settings: replace existing add-to-cart, label, colors, radius.
+{%- endcomment -%}
+
+{%- liquid
+  assign btn_label = block.settings.button_label
+  if btn_label == blank
+    assign btn_label = 'block.add_to_quote' | t
+  endif
+  assign btn_color = block.settings.button_color
+  assign txt_color = block.settings.text_color
+  assign hover_bg = block.settings.hover_color
+  assign hover_txt = block.settings.hover_text_color
+  assign border_color = block.settings.border_color
+  assign border_width = block.settings.border_width | default: 0
+  assign radius = block.settings.border_radius | default: 8
+  assign font_size = block.settings.font_size | default: 15
+  assign font_weight = block.settings.font_weight | default: '600'
+  assign letter_spacing = block.settings.letter_spacing | default: 0
+  assign text_transform = block.settings.text_transform | default: 'none'
+  assign btn_height = block.settings.button_height | default: 48
+  assign btn_width = block.settings.button_width | default: 'full'
+  assign hover_lift = block.settings.hover_lift
+  assign shadow = block.settings.shadow_strength | default: 'medium'
+  assign replace_atc = block.settings.replace_add_to_cart
+  assign show_qty = block.settings.show_quantity_selector
+-%}
+
+{%- liquid
+  case shadow
+    when 'none'
+      assign shadow_rest = 'none'
+      assign shadow_hover = 'none'
+    when 'soft'
+      assign shadow_rest = 'none'
+      assign shadow_hover = '0 2px 8px rgba(0,0,0,.06)'
+    when 'medium'
+      assign shadow_rest = 'none'
+      assign shadow_hover = '0 4px 14px rgba(0,0,0,.08)'
+    when 'strong'
+      assign shadow_rest = '0 2px 6px rgba(0,0,0,.06)'
+      assign shadow_hover = '0 8px 22px rgba(0,0,0,.14)'
+  endcase
+-%}
+
+<style>
+  .qc-atq-{{ block.id }} {
+    background: {{ btn_color }};
+    color: {{ txt_color }};
+    border-radius: {{ radius }}px;
+    border: {{ border_width }}px solid {{ border_color | default: btn_color }};
+    padding: 0 22px;
+    font-size: {{ font_size }}px;
+    font-weight: {{ font_weight }};
+    letter-spacing: {{ letter_spacing }}px;
+    text-transform: {{ text_transform }};
+    cursor: pointer;
+    {% if btn_width == 'full' %}width: 100%;{% else %}width: auto; min-width: 180px;{% endif %}
+    height: {{ btn_height }}px;
+    box-shadow: {{ shadow_rest }};
+    transition: transform .12s ease, background .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
+    margin-top: 8px;
+    font-family: inherit;
+  }
+  .qc-atq-{{ block.id }}:hover {
+    {% if hover_bg != blank %}background: {{ hover_bg }};{% endif %}
+    {% if hover_txt != blank %}color: {{ hover_txt }};{% endif %}
+    {% if hover_lift %}transform: translateY(-1px);{% endif %}
+    box-shadow: {{ shadow_hover }};
+  }
+  .qc-atq-{{ block.id }}:active { transform: translateY(0); }
+  .qc-atq-{{ block.id }}:focus-visible { outline: 2px solid {{ hover_bg | default: btn_color }}; outline-offset: 2px; }
+  .qc-atq-{{ block.id }}[disabled] { opacity: .55; cursor: not-allowed; }
+  {% if replace_atc %}
+    [data-quote-cart-replace-atc] form[action*="/cart/add"] button[type="submit"],
+    [data-quote-cart-replace-atc] form[action*="/cart/add"] [name="add"],
+    [data-quote-cart-replace-atc] [data-product-form] [type="submit"] {
+      display: none !important;
+    }
+  {% endif %}
+</style>
+
+<div
+  class="qc-atq-wrapper"
+  {% if replace_atc %}data-quote-cart-replace-atc{% endif %}
+  data-qc-button-block="{{ block.id }}"
+  {{ block.shopify_attributes }}
+>
+  {% if show_qty %}
+    <div class="qc-block-qty-row">
+      <label class="qc-block-qty-label" for="qc-qty-{{ block.id }}">
+        {{ 'block.quantity_label' | t }}
+      </label>
+      <div class="qc-stepper qc-block-stepper" role="group" aria-label="{{ 'block.quantity_label' | t }}">
+        <button type="button" data-qc-qty-action="dec" aria-label="−" tabindex="0">−</button>
+        <input
+          id="qc-qty-{{ block.id }}"
+          type="number"
+          min="1"
+          step="1"
+          value="1"
+          data-qc-qty
+          aria-label="{{ 'block.quantity_label' | t }}"
+        />
+        <button type="button" data-qc-qty-action="inc" aria-label="+" tabindex="0">+</button>
+      </div>
+    </div>
+  {% endif %}
+  <button
+    type="button"
+    class="qc-atq-{{ block.id }} qc-add-to-quote"
+    aria-label="{{ btn_label | escape }}"
+    data-qc-product-id="{{ product.id }}"
+    data-qc-product-title="{{ product.title | escape }}"
+    data-qc-product-handle="{{ product.handle }}"
+  >
+    <span>{{ btn_label }}</span>
+  </button>
+</div>
+
+{% comment %} Localizable strings shared across all storefront UI {% endcomment %}
+<script>
+  window.QUOTE_CART_STRINGS = window.QUOTE_CART_STRINGS || {};
+  window.QUOTE_CART_STRINGS.add_to_quote = {{ 'block.add_to_quote' | t | json }};
+  window.QUOTE_CART_STRINGS.added = {{ 'popup.added' | t | json }};
+  window.QUOTE_CART_STRINGS.continue = {{ 'popup.continue_shopping' | t | json }};
+  window.QUOTE_CART_STRINGS.view_quote = {{ 'popup.view_quote' | t | json }};
+  window.QUOTE_CART_STRINGS.close = {{ 'popup.close' | t | json }};
+  window.QUOTE_CART_STRINGS.your_quote = {{ 'drawer.your_quote' | t | json }};
+  window.QUOTE_CART_STRINGS.empty = {{ 'drawer.empty' | t | json }};
+  window.QUOTE_CART_STRINGS.subtotal = {{ 'drawer.subtotal' | t | json }};
+  window.QUOTE_CART_STRINGS.view_full_quote = {{ 'drawer.view_full_quote' | t | json }};
+  window.QUOTE_CART_STRINGS.continue_shopping = {{ 'drawer.continue_shopping' | t | json }};
+  window.QUOTE_CART_STRINGS.remove = {{ 'drawer.remove' | t | json }};
+  window.QUOTE_CART_STRINGS.qty = {{ 'drawer.qty' | t | json }};
+
+  window.QUOTE_CART_CONFIG = window.QUOTE_CART_CONFIG || {};
+  window.QUOTE_CART_CONFIG.shopCurrency = {{ shop.currency | json }};
+  window.QUOTE_CART_CONFIG.moneyFormat = {{ shop.money_format | json }};
+  window.QUOTE_CART_CONFIG.locale = {{ request.locale.iso_code | json }};
+  window.QUOTE_CART_CONFIG.shopName = {{ shop.name | json }};
+</script>
+
+{%- comment -%} Inline product data so JS can read the current variant on click {%- endcomment -%}
+<script type="application/json" id="qc-product-data-{{ block.id }}">
+  {
+    "id": {{ product.id }},
+    "title": {{ product.title | json }},
+    "handle": {{ product.handle | json }},
+    "url": {{ product.url | json }},
+    "featured_image": {{ product.featured_image | image_url: width: 200 | json }},
+    "variants": [
+      {%- for v in product.variants -%}
+        {
+          "id": {{ v.id }},
+          "title": {{ v.title | json }},
+          "price": {{ v.price | money_without_currency | json }},
+          "available": {{ v.available }},
+          "image": {{ v.image | image_url: width: 200 | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  }
+</script>
+
+{% render 'quote-popup' %}
+
+{%- comment -%} Merchant translation overrides — loads BEFORE main JS so overrides apply first {%- endcomment -%}
+<script src="/apps/quote/strings?lang={{ request.locale.iso_code | downcase | slice: 0, 2 }}" defer></script>
+<script src="{{ 'quote-cart.js' | asset_url }}" defer></script>
+<script src="{{ 'quote-tracking.js' | asset_url }}" defer></script>
+<link rel="stylesheet" href="{{ 'quote-cart.css' | asset_url }}">
+
+{% schema %}
+{
+  "name": "t:block_button_name",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:settings.behavior_header"
+    },
+    {
+      "type": "checkbox",
+      "id": "replace_add_to_cart",
+      "label": "t:settings.replace_atc",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quantity_selector",
+      "label": "t:settings.show_quantity_selector",
+      "info": "t:settings.show_quantity_selector_info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:settings.appearance_header"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:settings.button_label",
+      "default": "Add to Quote"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "t:settings.button_color",
+      "default": "#111111"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "t:settings.text_color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "hover_color",
+      "label": "t:settings.hover_color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "hover_text_color",
+      "label": "t:settings.hover_text_color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "t:settings.border_color",
+      "default": "#111111"
+    },
+    {
+      "type": "range",
+      "id": "border_width",
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "label": "t:settings.border_width",
+      "default": 0,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 32,
+      "step": 1,
+      "label": "t:settings.border_radius",
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "t:settings.typography_header"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 22,
+      "step": 1,
+      "label": "t:settings.font_size",
+      "default": 15,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "t:settings.font_weight",
+      "options": [
+        { "value": "400", "label": "Regular" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semibold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "600"
+    },
+    {
+      "type": "range",
+      "id": "letter_spacing",
+      "min": -1,
+      "max": 4,
+      "step": 0.1,
+      "label": "t:settings.letter_spacing",
+      "default": 0,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "text_transform",
+      "label": "t:settings.text_transform",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "uppercase", "label": "UPPERCASE" },
+        { "value": "lowercase", "label": "lowercase" },
+        { "value": "capitalize", "label": "Capitalize" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "header",
+      "content": "t:settings.size_header"
+    },
+    {
+      "type": "select",
+      "id": "button_width",
+      "label": "t:settings.button_width",
+      "options": [
+        { "value": "full", "label": "Full width" },
+        { "value": "auto", "label": "Auto" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "range",
+      "id": "button_height",
+      "min": 36,
+      "max": 64,
+      "step": 1,
+      "label": "t:settings.button_height",
+      "default": 48,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "t:settings.effects_header"
+    },
+    {
+      "type": "checkbox",
+      "id": "hover_lift",
+      "label": "t:settings.hover_lift",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "shadow_strength",
+      "label": "t:settings.shadow_strength",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "soft", "label": "Soft" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "strong", "label": "Strong" }
+      ],
+      "default": "medium"
+    }
+  ]
+}
+{% endschema %}

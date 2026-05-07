@@ -1,0 +1,120 @@
+{%- comment -%}
+  Quote Cart — Floating launcher (app embed)
+  Adds a floating quote icon (with item count badge) and a slide-in drawer
+  that lists items and links to the full quote page.
+
+  Enable from the theme editor: App embeds → Quote Cart launcher.
+{%- endcomment -%}
+
+{%- liquid
+  assign corner = block.settings.corner | default: 'bottom-right'
+  assign hide_when_empty = block.settings.hide_when_empty
+  assign accent = block.settings.accent_color | default: '#111111'
+  assign on_accent = block.settings.icon_color | default: '#ffffff'
+-%}
+
+<style>
+  :root {
+    --qc-accent: {{ accent }};
+    --qc-on-accent: {{ on_accent }};
+  }
+</style>
+
+<div
+  id="qc-launcher"
+  class="qc-launcher qc-corner-{{ corner }}"
+  data-hide-when-empty="{{ hide_when_empty }}"
+  aria-hidden="true"
+>
+  <button
+    id="qc-launcher-btn"
+    class="qc-launcher-btn"
+    type="button"
+    aria-label="{{ 'launcher.open' | t }}"
+    aria-haspopup="dialog"
+    aria-controls="qc-drawer"
+    aria-expanded="false"
+  >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="9" y1="13" x2="15" y2="13"></line>
+      <line x1="9" y1="17" x2="13" y2="17"></line>
+    </svg>
+    <span class="qc-launcher-badge" id="qc-launcher-badge" aria-hidden="true">0</span>
+  </button>
+</div>
+
+{% render 'quote-drawer' %}
+
+<script>
+  // Localized strings + config (also set by the button block; either is fine).
+  window.QUOTE_CART_STRINGS = Object.assign(window.QUOTE_CART_STRINGS || {}, {
+    add_to_quote: {{ 'block.add_to_quote' | t | json }},
+    added: {{ 'popup.added' | t | json }},
+    continue: {{ 'popup.continue_shopping' | t | json }},
+    view_quote: {{ 'popup.view_quote' | t | json }},
+    close: {{ 'popup.close' | t | json }},
+    your_quote: {{ 'drawer.your_quote' | t | json }},
+    empty: {{ 'drawer.empty' | t | json }},
+    subtotal: {{ 'drawer.subtotal' | t | json }},
+    view_full_quote: {{ 'drawer.view_full_quote' | t | json }},
+    continue_shopping: {{ 'drawer.continue_shopping' | t | json }},
+    remove: {{ 'drawer.remove' | t | json }},
+    qty: {{ 'drawer.qty' | t | json }}
+  });
+  window.QUOTE_CART_CONFIG = Object.assign(window.QUOTE_CART_CONFIG || {}, {
+    shopCurrency: {{ shop.currency | json }},
+    moneyFormat: {{ shop.money_format | json }},
+    locale: {{ request.locale.iso_code | json }},
+    shopName: {{ shop.name | json }}
+  });
+</script>
+
+{% render 'quote-popup' %}
+
+<script src="/apps/quote/strings?lang={{ request.locale.iso_code | downcase | slice: 0, 2 }}" defer></script>
+<script src="{{ 'quote-cart.js' | asset_url }}" defer></script>
+<script src="{{ 'quote-tracking.js' | asset_url }}" defer></script>
+<link rel="stylesheet" href="{{ 'quote-cart.css' | asset_url }}">
+
+{% schema %}
+{
+  "name": "t:embed_launcher_name",
+  "target": "body",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:settings.launcher_header"
+    },
+    {
+      "type": "select",
+      "id": "corner",
+      "label": "t:settings.corner",
+      "options": [
+        { "value": "top-right", "label": "Top right" },
+        { "value": "bottom-right", "label": "Bottom right" }
+      ],
+      "default": "bottom-right"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_when_empty",
+      "label": "t:settings.hide_when_empty",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "t:settings.accent_color",
+      "default": "#111111"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:settings.icon_color",
+      "default": "#ffffff"
+    }
+  ]
+}
+{% endschema %}

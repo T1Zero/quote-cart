@@ -1,0 +1,183 @@
+{%- comment -%}
+  Quote Cart — navbar link block (icon-only, opens drawer)
+  Add to: Theme editor → Header section → Add block → Apps → Quote Cart link
+{%- endcomment -%}
+
+{%- liquid
+  assign icon_color = block.settings.icon_color
+  assign badge_color = block.settings.badge_color | default: '#d72c0d'
+  assign aria_label = 'drawer.your_quote' | t
+-%}
+
+<button
+  type="button"
+  class="qc-navlink"
+  aria-label="{{ aria_label | escape }}"
+  data-quote-cart-open-drawer
+  aria-haspopup="dialog"
+  aria-controls="qc-drawer"
+  aria-expanded="false"
+  {{ block.shopify_attributes }}
+  style="
+    {% if icon_color != blank %}--qc-navlink-icon: {{ icon_color }};{% endif %}
+    --qc-navlink-badge: {{ badge_color }};
+  "
+>
+  <span class="qc-navlink-icon-wrap" aria-hidden="true">
+    {%- comment -%}
+      Shopify-style shopping-bag icon — same silhouette Dawn / Sense / most
+      modern Shopify themes use: angled top corners, top rim line, and the
+      handle visible as a curve inside the rim.
+    {%- endcomment -%}
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+      <path d="M3 6h18"></path>
+      <path d="M16 10a4 4 0 0 1-8 0"></path>
+    </svg>
+    <span class="qc-navlink-count" data-quote-cart-count aria-live="polite">0</span>
+  </span>
+</button>
+
+<style>
+  .qc-navlink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 50%;
+    text-decoration: none;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    overflow: visible;
+    box-sizing: border-box;
+  }
+  .qc-navlink:hover { background: rgba(0,0,0,0.06); }
+  .qc-navlink:focus-visible {
+    outline: 2px solid var(--qc-navlink-icon, currentColor);
+    outline-offset: 2px;
+  }
+  .qc-navlink-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: var(--qc-navlink-icon, currentColor);
+    flex-shrink: 0;
+    line-height: 0;
+  }
+  .qc-navlink-icon-wrap svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+  .qc-navlink-count {
+    position: absolute;
+    top: -7px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--qc-navlink-badge, #d72c0d);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    box-sizing: border-box;
+    pointer-events: none;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .qc-navlink-count[data-empty="true"] {
+    transform: scale(0);
+    opacity: 0;
+  }
+</style>
+
+<script>
+  // Localized strings + config — set up by every Quote Cart block (idempotent).
+  window.QUOTE_CART_STRINGS = Object.assign(window.QUOTE_CART_STRINGS || {}, {
+    add_to_quote: {{ 'block.add_to_quote' | t | json }},
+    added: {{ 'popup.added' | t | json }},
+    continue: {{ 'popup.continue_shopping' | t | json }},
+    view_quote: {{ 'popup.view_quote' | t | json }},
+    close: {{ 'popup.close' | t | json }},
+    your_quote: {{ 'drawer.your_quote' | t | json }},
+    empty: {{ 'drawer.empty' | t | json }},
+    subtotal: {{ 'drawer.subtotal' | t | json }},
+    view_full_quote: {{ 'drawer.view_full_quote' | t | json }},
+    continue_shopping: {{ 'drawer.continue_shopping' | t | json }},
+    remove: {{ 'drawer.remove' | t | json }},
+    qty: {{ 'drawer.qty' | t | json }}
+  });
+  window.QUOTE_CART_CONFIG = Object.assign(window.QUOTE_CART_CONFIG || {}, {
+    shopCurrency: {{ shop.currency | json }},
+    moneyFormat: {{ shop.money_format | json }},
+    locale: {{ request.locale.iso_code | json }},
+    shopName: {{ shop.name | json }}
+  });
+
+  // Live count badge
+  (function () {
+    if (window.__QUOTE_CART_NAVLINK_BOUND__) return;
+    window.__QUOTE_CART_NAVLINK_BOUND__ = true;
+    function render() {
+      try {
+        var raw = localStorage.getItem("quote_cart");
+        var items = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(items)) items = [];
+        var count = items.reduce(function (s, i) {
+          return s + (parseInt(i.quantity, 10) || 0);
+        }, 0);
+        var els = document.querySelectorAll("[data-quote-cart-count]");
+        for (var i = 0; i < els.length; i++) {
+          els[i].textContent = String(count);
+          els[i].setAttribute("data-empty", count === 0 ? "true" : "false");
+        }
+      } catch (_) {}
+    }
+    render();
+    window.addEventListener("quote:updated", render);
+    window.addEventListener("storage", function (e) { if (e.key === "quote_cart") render(); });
+    document.addEventListener("shopify:section:load", render);
+  })();
+</script>
+
+{% render 'quote-popup' %}
+{% render 'quote-drawer' %}
+
+<link rel="stylesheet" href="{{ 'quote-cart.css' | asset_url }}">
+<script src="/apps/quote/strings?lang={{ request.locale.iso_code | downcase | slice: 0, 2 }}" defer></script>
+<script src="{{ 'quote-cart.js' | asset_url }}" defer></script>
+<script src="{{ 'quote-tracking.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "t:block_navlink_name",
+  "target": "section",
+  "settings": [
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "t:settings.icon_color"
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "t:settings.badge_color",
+      "default": "#d72c0d"
+    }
+  ]
+}
+{% endschema %}

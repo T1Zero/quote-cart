@@ -1,0 +1,179 @@
+// Quote Cart — Prisma schema
+//
+// Uses SQLite for local dev. Swap to PostgreSQL by changing `provider`
+// to "postgresql" and pointing DATABASE_URL at your Postgres instance.
+// All models are written to be portable across both providers
+// (no SQLite-specific types, JSON stored as String for portability).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Standard Shopify session table (managed by @shopify/shopify-app-session-storage-prisma).
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+// Per-shop email + template configuration.
+model EmailSettings {
+  id                  String   @id @default(cuid())
+  shopDomain          String   @unique
+  senderName          String   @default("")
+  senderEmail         String   @default("")
+  smtpHost            String   @default("")
+  smtpPort            Int      @default(587)
+  smtpUser            String   @default("")
+  // Encrypted with AES-256-GCM. See app/lib/crypto.server.ts.
+  smtpPassEncrypted   String   @default("")
+  // Comma-separated list of merchant notification recipients.
+  notificationEmails  String   @default("")
+  customerSubject     String   @default("")
+  customerBody        String   @default("")
+  merchantSubject     String   @default("")
+  merchantBody        String   @default("")
+  updatedAt           DateTime @updatedAt
+}
+
+// Per-shop ad / analytics configuration.
+model TrackingSettings {
+  id                       String   @id @default(cuid())
+  shopDomain               String   @unique
+  metaPixelId              String   @default("")
+  metaCapiTokenEncrypted   String   @default("")
+  metaTestEventCode        String   @default("")
+  googleAdsConversionId    String   @default("")
+  googleAdsConversionLabel String   @default("")
+  ga4MeasurementId         String   @default("")
+  ga4ApiSecretEncrypted    String   @default("")
+  gtmContainerId           String   @default("")
+  clientTrackingEnabled    Boolean  @default(true)
+  serverTrackingEnabled    Boolean  @default(true)
+  updatedAt                DateTime @updatedAt
+}
+
+model Quote {
+  id                    String        @id @default(cuid())
+  shopDomain            String
+  customerName          String
+  customerEmail         String
+  customerPhone         String
+  message               String        @default("")
+  status                String        @default("new") // new | responded | closed
+  internalNotes         String        @default("")
+  createdAt             DateTime      @default(now())
+  respondedAt           DateTime?
+  // Set when a Shopify draft order is created from this quote (manually or auto).
+  shopifyDraftOrderId   String?
+  shopifyDraftOrderName String?
+  shopifyDraftOrderUrl  String?
+  items                 QuoteItem[]
+  trackingEvents        TrackingEvent[]
+  customFieldValues     CustomFieldValue[]
+
+  @@index([shopDomain, createdAt])
+  @@index([shopDomain, status])
+}
+
+// Merchant-defined custom fields shown on the quote contact form.
+model CustomField {
+  id          String   @id @default(cuid())
+  shopDomain  String
+  label       String                       // Visible to the customer
+  fieldType   String   @default("text")    // text | textarea | email | tel | select
+  options     String   @default("")        // JSON-encoded string array (for select)
+  placeholder String   @default("")
+  required    Boolean  @default(false)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shopDomain, position])
+}
+
+// One row per custom-field answer. Snapshot of label so it survives a later edit/delete.
+model CustomFieldValue {
+  id         String  @id @default(cuid())
+  quoteId    String
+  quote      Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  fieldId    String?                   // nullable in case the field was later deleted
+  fieldLabel String
+  fieldValue String  @default("")
+
+  @@index([quoteId])
+}
+
+model OrderSettings {
+  id                  String   @id @default(cuid())
+  shopDomain          String   @unique
+  // If true, every quote submission automatically creates a Shopify draft order.
+  autoCreateDraft     Boolean  @default(false)
+  // If true, sends Shopify's invoice email to the customer when the draft is created.
+  autoSendInvoice     Boolean  @default(false)
+  // Tag applied to every draft order we create — useful for filtering in admin.
+  draftOrderTag       String   @default("quote-cart")
+  updatedAt           DateTime @updatedAt
+}
+
+// Per-shop, per-language overrides for storefront UI strings.
+// JSON-encoded { en: { key: value, ... }, bg: { ... } } stored as string for portability.
+model Translations {
+  id          String   @id @default(cuid())
+  shopDomain  String   @unique
+  overridesEn String   @default("{}")
+  overridesBg String   @default("{}")
+  updatedAt   DateTime @updatedAt
+}
+
+model QuoteItem {
+  id            String  @id @default(cuid())
+  quoteId       String
+  quote         Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId     String
+  variantId     String
+  productTitle  String
+  variantTitle  String  @default("")
+  image         String  @default("")
+  // Stored as a string for SQLite/Postgres portability. Parse with parseFloat().
+  price         String  @default("0")
+  quantity      Int     @default(1)
+
+  @@index([quoteId])
+}
+
+model TrackingEvent {
+  id           String   @id @default(cuid())
+  quoteId      String
+  quote        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  // 'meta_capi' | 'ga4' | 'google_ads'
+  platform     String
+  // 'success' | 'failed'
+  status       String
+  errorMessage String?
+  // Shared deduplication ID across server- and client-side fires.
+  eventId      String
+  // Serialized JSON of the request payload. Use JSON.parse() to read.
+  payload      String   @default("{}")
+  createdAt    DateTime @default(now())
+
+  @@index([quoteId])
+  @@index([platform, status])
+}

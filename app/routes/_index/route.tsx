@@ -1,0 +1,57 @@
+import { redirect } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
+import { Form, useLoaderData } from "@remix-run/react";
+import { login } from "../../shopify.server";
+import styles from "./styles.module.css";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+
+  if (url.searchParams.get("shop")) {
+    throw redirect(`/app?${url.searchParams.toString()}`);
+  }
+
+  return { showForm: Boolean(login) };
+};
+
+export default function App() {
+  const { showForm } = useLoaderData<typeof loader>();
+
+  return (
+    <div className={styles.index}>
+      <div className={styles.content}>
+        <h1 className={styles.heading}>Quote Cart</h1>
+        <p className={styles.text}>
+          Replace Add-to-Cart with Request-for-Quote. Built for stores that
+          quote before they sell.
+        </p>
+        {showForm && (
+          <Form className={styles.form} method="post" action="/auth/login">
+            <label className={styles.label}>
+              <span>Shop domain</span>
+              <input className={styles.input} type="text" name="shop" />
+              <span>e.g: my-shop-domain.myshopify.com</span>
+            </label>
+            <button className={styles.button} type="submit">
+              Log in
+            </button>
+          </Form>
+        )}
+        <ul className={styles.list}>
+          <li>
+            <strong>Storefront block</strong>. Customers add products to a
+            quote, submit a contact form, get an email confirmation.
+          </li>
+          <li>
+            <strong>Admin dashboard</strong>. See pending quotes, mark them as
+            responded, jot internal notes.
+          </li>
+          <li>
+            <strong>Conversion tracking</strong>. Submission fires Lead events
+            to Meta CAPI, GA4, and Google Ads with deduplication.
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
