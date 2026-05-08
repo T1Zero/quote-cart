@@ -16,9 +16,13 @@ if (
   delete process.env.HOST;
 }
 
-const host = new URL(
-  process.env.SHOPIFY_APP_URL || "http://localhost",
-).hostname;
+// Defensive: env vars on production hosts are often pasted without a protocol.
+// Prepend https:// when missing so the URL constructor doesn't crash the build.
+const rawAppUrl = process.env.SHOPIFY_APP_URL || "http://localhost";
+const normalizedAppUrl = /^https?:\/\//i.test(rawAppUrl)
+  ? rawAppUrl
+  : `https://${rawAppUrl}`;
+const host = new URL(normalizedAppUrl).hostname;
 
 let hmrConfig;
 if (host === "localhost") {
