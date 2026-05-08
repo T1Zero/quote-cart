@@ -14,7 +14,7 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "setup": "prisma generate && prisma migrate deploy",
-    "start": "remix-serve ./build/server/index.js",
+    "start": "prisma migrate deploy && remix-serve ./build/server/index.js",
     "docker-start": "npm run setup && npm run start",
     "typecheck": "tsc --noEmit"
   },
