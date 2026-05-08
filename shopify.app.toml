@@ -2,7 +2,7 @@
 
 client_id = "b62160b04b2ee1266c1d09c7f5cfc3d6"
 name = "quote-cart"
-application_url = "https://example.com"
+application_url = "https://quote-cart-extension-production.up.railway.app"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ scopes = "read_products,write_products,write_draft_orders,read_customers,write_c
 
 [auth]
 redirect_urls = [
-  "https://example.com/auth/callback",
-  "https://example.com/auth/shopify/callback",
-  "https://example.com/api/auth/callback"
+  "https://quote-cart-extension-production.up.railway.app/auth/callback",
+  "https://quote-cart-extension-production.up.railway.app/auth/shopify/callback",
+  "https://quote-cart-extension-production.up.railway.app/api/auth/callback"
 ]
 
 [webhooks]
@@ -29,10 +29,8 @@ api_version = "2026-07"
   uri = "/webhooks/app/scopes_update"
 
 # App Proxy: storefront /apps/quote -> our Remix routes /apps/quote and /apps/quote/submit.
-# `automatically_update_urls_on_dev` swaps these placeholder URLs for the dev tunnel URL when
-# you run `shopify app dev`.
 [app_proxy]
-url = "https://example.com/apps/quote"
+url = "https://quote-cart-extension-production.up.railway.app/apps/quote"
 prefix = "apps"
 subpath = "quote"
 
