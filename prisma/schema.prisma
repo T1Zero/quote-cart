@@ -10,7 +10,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // Set to "postgresql" or "sqlite" depending on DATABASE_URL.
+  // The schema is portable — JSON values stored as strings, numeric prices as strings.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

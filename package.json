@@ -13,8 +13,8 @@
     "shopify": "npx shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "setup": "prisma generate && prisma migrate deploy",
-    "start": "prisma migrate deploy && remix-serve ./build/server/index.js",
+    "setup": "prisma generate && prisma db push --accept-data-loss",
+    "start": "prisma db push --accept-data-loss && remix-serve ./build/server/index.js",
     "docker-start": "npm run setup && npm run start",
     "typecheck": "tsc --noEmit"
   },
