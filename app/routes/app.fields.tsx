@@ -78,34 +78,33 @@ export default function CustomFieldsPage() {
     >
       <Layout>
         <Layout.Section>
-          {editing && (
-            <Box paddingBlockEnd="400">
-              <FieldForm
-                field={editing === "new" ? null : editing}
-                position={editing === "new" ? fields.length : editing.position}
-                onClose={() => setEditing(null)}
-              />
-            </Box>
+          {editing ? (
+            <FieldForm
+              field={editing === "new" ? null : editing}
+              position={editing === "new" ? fields.length : editing.position}
+              onClose={() => setEditing(null)}
+            />
+          ) : (
+            <Card padding="0">
+              {fields.length === 0 ? (
+                <EmptyState
+                  heading="No custom fields yet"
+                  action={{
+                    content: "Add field",
+                    onAction: () => setEditing("new"),
+                  }}
+                  image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                >
+                  <p>
+                    Add fields like "Company name", "Industry", or "Need by date"
+                    and choose whether each is required.
+                  </p>
+                </EmptyState>
+              ) : (
+                <FieldList fields={fields} onEdit={setEditing} />
+              )}
+            </Card>
           )}
-          <Card padding="0">
-            {fields.length === 0 ? (
-              <EmptyState
-                heading="No custom fields yet"
-                action={{
-                  content: "Add field",
-                  onAction: () => setEditing("new"),
-                }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-              >
-                <p>
-                  Add fields like "Company name", "Industry", or "Need by date"
-                  and choose whether each is required.
-                </p>
-              </EmptyState>
-            ) : (
-              <FieldList fields={fields} onEdit={setEditing} />
-            )}
-          </Card>
         </Layout.Section>
       </Layout>
     </Page>
