@@ -101,44 +101,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const currency = (body.currency || "USD").toUpperCase();
   const eventId = generateEventId();
 
-  // Fire emails + server-side tracking concurrently. Both are best-effort:
-  // a failure on either does NOT roll back the quote.
   const ip = clientIp(request);
   const ua = request.headers.get("user-agent") || "";
 
-  // Determine whether the merchant has auto-create-draft-order enabled.
-  // Checked here so we can run it concurrently with email + tracking.
+  // Read order settings before kicking off background work so we can decide
+  // whether to auto-create a Shopify draft order.
   const orderSettings = await getOrInitOrderSettings(shopDomain);
   const shouldAutoCreateDraft = orderSettings.autoCreateDraft;
 
-  const [emailRes] = await Promise.all([
-    sendQuoteEmails(quote, shopDomain).catch((err) => ({
-      customer: { ok: false as const, error: err instanceof Error ? err.message : String(err) },
-      merchant: { ok: false as const, error: err instanceof Error ? err.message : String(err) },
-    })),
-    fireServerSideEvents(
-      quote,
-      {
-        eventId,
-        eventSourceUrl: body.pageUrl || `https://${shopDomain}/apps/quote`,
-        clientIp: ip,
-        userAgent: ua,
-        fbp: body.fbp || undefined,
-        fbc: body.fbc || undefined,
-        ga: body.ga || undefined,
-        gclid: body.gclid || undefined,
-        currency,
-        value,
-      },
-      shopDomain,
-    ).catch(() => []),
-    shouldAutoCreateDraft
-      ? createDraftOrderFromQuote(shopDomain, quote).catch((err) => ({
-          ok: false as const,
-          error: err instanceof Error ? err.message : String(err),
-        }))
-      : Promise.resolve(null),
-  ]);
+  // Fire-and-forget side effects: emails, server-side tracking, draft order.
+  // Shopify's App Proxy enforces a ~30s hard timeout. If SMTP misconfig or
+  // a slow tracking platform keeps these awaited too long, the customer sees
+  // "Request timed out". Instead, persist the quote synchronously and let the
+  // side effects complete in the background — failures show up in the admin
+  // (TrackingEvent rows / quote detail) rather than blocking the user.
+  const trackingCtx = {
+    eventId,
+    eventSourceUrl: body.pageUrl || `https://${shopDomain}/apps/quote`,
+    clientIp: ip,
+    userAgent: ua,
+    fbp: body.fbp || undefined,
+    fbc: body.fbc || undefined,
+    ga: body.ga || undefined,
+    gclid: body.gclid || undefined,
+    currency,
+    value,
+  };
+  void runBackgroundSideEffects({
+    quote,
+    shopDomain,
+    trackingCtx,
+    shouldAutoCreateDraft,
+  });
 
   // Build the response. The client uses `event_id` to dedupe its
   // own pixel/gtag fires against the server-side ones.
@@ -155,12 +149,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       quantity: i.quantity,
       price: parseFloat(i.price) || 0,
     })),
-    email: {
-      customer: emailRes.customer.ok,
-      merchant: emailRes.merchant.ok,
-    },
   });
 };
+
+async function runBackgroundSideEffects(args: {
+  quote: Awaited<ReturnType<typeof persistQuote>>;
+  shopDomain: string;
+  trackingCtx: Parameters<typeof fireServerSideEvents>[1];
+  shouldAutoCreateDraft: boolean;
+}) {
+  const { quote, shopDomain, trackingCtx, shouldAutoCreateDraft } = args;
+  await Promise.allSettled([
+    sendQuoteEmails(quote, shopDomain).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[QuoteCart] sendQuoteEmails failed", err);
+    }),
+    fireServerSideEvents(quote, trackingCtx, shopDomain).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[QuoteCart] fireServerSideEvents failed", err);
+    }),
+    shouldAutoCreateDraft
+      ? createDraftOrderFromQuote(shopDomain, quote).catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("[QuoteCart] createDraftOrderFromQuote failed", err);
+        })
+      : Promise.resolve(null),
+  ]);
+}
 
 // Loader for non-POST hits — e.g., merchants browsing to it directly.
 export const loader = () =>
