@@ -202,6 +202,136 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * Tiny Markdown → HTML converter for email bodies.
+ * Supports: # ## ### headings, **bold**, *italic*, [text](url),
+ * ![alt](url) images, --- horizontal rule, - bulleted lists,
+ * paragraphs (separated by blank lines), and bare URLs auto-linked.
+ *
+ * Preserves any HTML the merchant typed directly (so they can paste
+ * raw <table> or <img> from a designer's HTML email template).
+ */
+export function markdownToHtml(input: string): string {
+  if (!input) return "";
+
+  // If the body has any block-level HTML, use it as-is. Email clients
+  // are conservative about HTML inside HTML, so we don't try to "double-render".
+  if (/<(div|table|p|h[1-6]|img|a|section|article|blockquote)\b/i.test(input)) {
+    return input;
+  }
+
+  const lines = input.split(/\r?\n/);
+  const out: string[] = [];
+  let inList = false;
+  let para: string[] = [];
+
+  const flushPara = () => {
+    if (para.length === 0) return;
+    out.push(`<p style="margin:0 0 16px;line-height:1.6">${formatInline(para.join(" "))}</p>`);
+    para = [];
+  };
+  const closeList = () => {
+    if (inList) {
+      out.push("</ul>");
+      inList = false;
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    if (!line.trim()) {
+      flushPara();
+      closeList();
+      continue;
+    }
+    if (/^---+\s*$/.test(line)) {
+      flushPara();
+      closeList();
+      out.push('<hr style="border:0;border-top:1px solid #e6e6e6;margin:20px 0">');
+      continue;
+    }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushPara();
+      closeList();
+      const level = heading[1].length;
+      const sizes = [22, 18, 16];
+      out.push(
+        `<h${level} style="margin:24px 0 12px;font-size:${sizes[level - 1]}px;font-weight:700;line-height:1.3">${formatInline(heading[2])}</h${level}>`,
+      );
+      continue;
+    }
+    const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+    if (bullet) {
+      flushPara();
+      if (!inList) {
+        out.push('<ul style="margin:0 0 16px;padding-left:20px;line-height:1.6">');
+        inList = true;
+      }
+      out.push(`<li>${formatInline(bullet[1])}</li>`);
+      continue;
+    }
+    closeList();
+    para.push(line);
+  }
+  flushPara();
+  closeList();
+  return out.join("\n");
+}
+
+function formatInline(s: string): string {
+  // Already-rendered content from buildItemsTable / buildCustomFieldsTable
+  // contains <table>; pass it through untouched.
+  if (/<(table|img|a)\b/i.test(s)) return s;
+  let out = s;
+  // Images first (before links — they share the syntax)
+  out = out.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+    (_m, alt, url) =>
+      `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width:100%;height:auto;border-radius:4px;display:inline-block">`,
+  );
+  // Links
+  out = out.replace(
+    /\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_m, text, url) =>
+      `<a href="${escapeHtml(url)}" style="color:#1f6feb;text-decoration:underline">${escapeHtml(text)}</a>`,
+  );
+  // Bold and italic — order matters (** before *)
+  out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
+  // Auto-link bare URLs that aren't already inside an <a>
+  out = out.replace(
+    /(^|\s)(https?:\/\/[^\s<]+)/g,
+    (_m, pre, url) =>
+      `${pre}<a href="${escapeHtml(url)}" style="color:#1f6feb;text-decoration:underline">${escapeHtml(url)}</a>`,
+  );
+  return out;
+}
+
+/**
+ * Wraps a rendered HTML body inside a basic styled email container.
+ * Optional logo gets prepended at the top.
+ */
+export function wrapEmailHtml(htmlBody: string, opts: { logoUrl?: string } = {}): string {
+  const logoBlock = opts.logoUrl
+    ? `<div style="text-align:center;margin-bottom:24px"><img src="${escapeHtml(
+        opts.logoUrl,
+      )}" alt="" style="max-width:160px;max-height:80px;height:auto"></div>`
+    : "";
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f6f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="padding:24px 12px;background:#f6f6f6">
+  <tr><td align="center">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;padding:32px 28px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+      <tr><td style="font-size:15px;line-height:1.6">
+        ${logoBlock}
+        ${htmlBody}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
 export function applyTemplate(
   template: string,
   vars: Record<TemplateVariable, string>,

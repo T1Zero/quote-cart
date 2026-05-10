@@ -15,6 +15,7 @@ import {
   InlineStack,
   Layout,
   Page,
+  Select,
   Tabs,
   Text,
   TextField,
@@ -65,12 +66,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     email: {
       senderName: email.senderName,
       senderEmail: email.senderEmail,
+      emailProvider: email.emailProvider || "smtp",
       smtpHost: email.smtpHost,
       smtpPort: email.smtpPort,
       smtpUser: email.smtpUser,
-      // Never send the decrypted password to the browser. Just signal whether one is set.
+      // Never send decrypted secrets to the browser. Just signal whether they're set.
       smtpPassSet: Boolean(email.smtpPassEncrypted),
+      resendApiKeySet: Boolean(email.resendApiKeyEncrypted),
       notificationEmails: email.notificationEmails,
+      sendMerchantNotification: email.sendMerchantNotification,
+      logoUrl: email.logoUrl,
       customerSubject: email.customerSubject || DEFAULT_TEMPLATES.en.customerSubject,
       customerBody: email.customerBody || DEFAULT_TEMPLATES.en.customerBody,
       merchantSubject: email.merchantSubject || DEFAULT_TEMPLATES.en.merchantSubject,
@@ -98,32 +103,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "save_email") {
     const smtpPass = String(formData.get("smtpPass") || "");
+    const resendApiKey = String(formData.get("resendApiKey") || "");
+    const provider = String(formData.get("emailProvider") || "smtp");
     const data = {
       senderName: String(formData.get("senderName") || ""),
       senderEmail: String(formData.get("senderEmail") || ""),
+      emailProvider: provider === "resend" ? "resend" : "smtp",
       smtpHost: String(formData.get("smtpHost") || ""),
       smtpPort: parseInt(String(formData.get("smtpPort") || "587"), 10) || 587,
       smtpUser: String(formData.get("smtpUser") || ""),
       notificationEmails: String(formData.get("notificationEmails") || ""),
+      sendMerchantNotification: formData.get("sendMerchantNotification") === "on",
+      logoUrl: String(formData.get("logoUrl") || ""),
     };
-    // Only update the password when the merchant typed a new one. Empty input
+    // Only update secrets when the merchant typed new ones. Empty input
     // is "leave existing" so we don't accidentally wipe it on every save.
-    const passUpdate =
-      smtpPass && smtpPass !== SECRET_PLACEHOLDER
-        ? { smtpPassEncrypted: encryptSecret(smtpPass) }
-        : {};
+    const secretUpdates: Record<string, string> = {};
+    if (smtpPass && smtpPass !== SECRET_PLACEHOLDER) {
+      secretUpdates.smtpPassEncrypted = encryptSecret(smtpPass);
+    }
+    if (resendApiKey && resendApiKey !== SECRET_PLACEHOLDER) {
+      secretUpdates.resendApiKeyEncrypted = encryptSecret(resendApiKey);
+    }
     await prisma.emailSettings.upsert({
       where: { shopDomain: session.shop },
       create: {
         shopDomain: session.shop,
         ...data,
-        smtpPassEncrypted: passUpdate.smtpPassEncrypted ?? "",
+        smtpPassEncrypted: secretUpdates.smtpPassEncrypted ?? "",
+        resendApiKeyEncrypted: secretUpdates.resendApiKeyEncrypted ?? "",
         customerSubject: DEFAULT_TEMPLATES.en.customerSubject,
         customerBody: DEFAULT_TEMPLATES.en.customerBody,
         merchantSubject: DEFAULT_TEMPLATES.en.merchantSubject,
         merchantBody: DEFAULT_TEMPLATES.en.merchantBody,
       },
-      update: { ...data, ...passUpdate },
+      update: { ...data, ...secretUpdates },
     });
     return json({ ok: true, intent });
   }
@@ -286,11 +300,17 @@ function EmailTab({ email }: { email: ReturnType<typeof useLoaderData<typeof loa
 
   const [senderName, setSenderName] = useState(email.senderName);
   const [senderEmail, setSenderEmail] = useState(email.senderEmail);
+  const [emailProvider, setEmailProvider] = useState(email.emailProvider || "smtp");
   const [smtpHost, setSmtpHost] = useState(email.smtpHost);
   const [smtpPort, setSmtpPort] = useState(String(email.smtpPort));
   const [smtpUser, setSmtpUser] = useState(email.smtpUser);
   const [smtpPass, setSmtpPass] = useState("");
+  const [resendApiKey, setResendApiKey] = useState("");
   const [notificationEmails, setNotificationEmails] = useState(email.notificationEmails);
+  const [sendMerchantNotification, setSendMerchantNotification] = useState(
+    email.sendMerchantNotification,
+  );
+  const [logoUrl, setLogoUrl] = useState(email.logoUrl || "");
   const [testTo, setTestTo] = useState("");
 
   const isSaving = fetcher.state !== "idle";
@@ -323,61 +343,130 @@ function EmailTab({ email }: { email: ReturnType<typeof useLoaderData<typeof loa
               value={senderEmail}
               onChange={setSenderEmail}
               autoComplete="off"
-            />
-          </FormLayout.Group>
-
-          <Text as="h3" variant="headingSm">SMTP</Text>
-          <FormLayout.Group>
-            <TextField
-              label="Host"
-              name="smtpHost"
-              value={smtpHost}
-              onChange={setSmtpHost}
-              placeholder="smtp.example.com"
-              autoComplete="off"
-            />
-            <TextField
-              label="Port"
-              name="smtpPort"
-              type="number"
-              value={smtpPort}
-              onChange={setSmtpPort}
-              autoComplete="off"
-            />
-          </FormLayout.Group>
-          <FormLayout.Group>
-            <TextField
-              label="Username"
-              name="smtpUser"
-              value={smtpUser}
-              onChange={setSmtpUser}
-              autoComplete="off"
-            />
-            <TextField
-              label="Password"
-              name="smtpPass"
-              type="password"
-              value={smtpPass}
-              onChange={setSmtpPass}
-              placeholder={email.smtpPassSet ? "•••••••• (saved — type to replace)" : ""}
-              autoComplete="new-password"
               helpText={
-                email.smtpPassSet
-                  ? "Leave blank to keep the existing password. Encrypted at rest."
-                  : "Encrypted at rest with AES-256-GCM."
+                emailProvider === "resend"
+                  ? "Use onboarding@resend.dev for testing. Verify a domain in Resend to send from your real address."
+                  : ""
               }
             />
           </FormLayout.Group>
 
-          <TextField
-            label="Notification recipients"
-            name="notificationEmails"
-            value={notificationEmails}
-            onChange={setNotificationEmails}
-            placeholder="sales@example.com, ops@example.com"
-            helpText="Comma-separated. The merchant team gets a notification at each address when a quote comes in."
-            autoComplete="off"
+          <Select
+            label="Sending method"
+            name="emailProvider"
+            value={emailProvider}
+            onChange={setEmailProvider}
+            options={[
+              { label: "Resend (HTTP API) — recommended for cloud-hosted apps", value: "resend" },
+              { label: "SMTP (Gmail, custom server, etc.)", value: "smtp" },
+            ]}
+            helpText={
+              emailProvider === "resend"
+                ? "Goes through HTTPS to api.resend.com. Bypasses host firewalls that block SMTP."
+                : "Direct SMTP connection. Some hosts (Railway, Render) block outbound SMTP — switch to Resend if connections time out."
+            }
           />
+
+          {emailProvider === "resend" ? (
+            <TextField
+              label="Resend API key"
+              name="resendApiKey"
+              type="password"
+              value={resendApiKey}
+              onChange={setResendApiKey}
+              placeholder={email.resendApiKeySet ? "•••••••• (saved — type to replace)" : "re_..."}
+              autoComplete="new-password"
+              helpText={
+                email.resendApiKeySet
+                  ? "Leave blank to keep the existing key. Encrypted at rest."
+                  : "Get one at resend.com → API Keys. Encrypted at rest with AES-256-GCM."
+              }
+            />
+          ) : (
+            <BlockStack gap="300">
+              <Text as="h3" variant="headingSm">SMTP</Text>
+              <FormLayout.Group>
+                <TextField
+                  label="Host"
+                  name="smtpHost"
+                  value={smtpHost}
+                  onChange={setSmtpHost}
+                  placeholder="smtp.example.com"
+                  autoComplete="off"
+                />
+                <TextField
+                  label="Port"
+                  name="smtpPort"
+                  type="number"
+                  value={smtpPort}
+                  onChange={setSmtpPort}
+                  autoComplete="off"
+                />
+              </FormLayout.Group>
+              <FormLayout.Group>
+                <TextField
+                  label="Username"
+                  name="smtpUser"
+                  value={smtpUser}
+                  onChange={setSmtpUser}
+                  autoComplete="off"
+                />
+                <TextField
+                  label="Password"
+                  name="smtpPass"
+                  type="password"
+                  value={smtpPass}
+                  onChange={setSmtpPass}
+                  placeholder={email.smtpPassSet ? "•••••••• (saved — type to replace)" : ""}
+                  autoComplete="new-password"
+                  helpText={
+                    email.smtpPassSet
+                      ? "Leave blank to keep the existing password. Encrypted at rest."
+                      : "Encrypted at rest with AES-256-GCM."
+                  }
+                />
+              </FormLayout.Group>
+            </BlockStack>
+          )}
+
+          <Divider />
+
+          <Text as="h3" variant="headingSm">Branding</Text>
+          <TextField
+            label="Logo URL (optional)"
+            name="logoUrl"
+            type="url"
+            value={logoUrl}
+            onChange={setLogoUrl}
+            placeholder="https://yourstore.com/logo.png"
+            autoComplete="off"
+            helpText="Shown at the top of every HTML email. Hosted somewhere public — easiest is to upload to Shopify Files (Content → Files) and copy the URL."
+          />
+
+          <Divider />
+
+          <Text as="h3" variant="headingSm">Merchant notification</Text>
+          <Checkbox
+            label="Send a notification email to me when a customer submits a quote"
+            name="sendMerchantNotification"
+            checked={sendMerchantNotification}
+            onChange={setSendMerchantNotification}
+            helpText="Off = only the customer gets a confirmation. You'll still see every quote in the dashboard."
+          />
+          {sendMerchantNotification && (
+            <TextField
+              label="Notification recipients"
+              name="notificationEmails"
+              value={notificationEmails}
+              onChange={setNotificationEmails}
+              placeholder="sales@example.com, ops@example.com"
+              helpText="Comma-separated. Each address gets the merchant notification when a quote comes in."
+              autoComplete="off"
+            />
+          )}
+          {!sendMerchantNotification && (
+            <input type="hidden" name="notificationEmails" value={notificationEmails} />
+          )}
 
           <InlineStack gap="200">
             <Button submit variant="primary" loading={isSaving}>
@@ -394,7 +483,7 @@ function EmailTab({ email }: { email: ReturnType<typeof useLoaderData<typeof loa
           Send test email
         </Text>
         <Text as="p" tone="subdued" variant="bodySm">
-          Save your settings first, then send a test through the configured SMTP.
+          Save your settings first, then send a test through the configured provider.
         </Text>
         {testFetcher.data?.ok && testFetcher.data.message && (
           <Banner tone="success">{testFetcher.data.message}</Banner>

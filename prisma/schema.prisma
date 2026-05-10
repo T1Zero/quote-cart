@@ -41,13 +41,21 @@ model EmailSettings {
   shopDomain          String   @unique
   senderName          String   @default("")
   senderEmail         String   @default("")
+  // Sending provider: "smtp" (Nodemailer) or "resend" (Resend HTTP API).
+  // HTTP API is required on hosts where outbound SMTP is blocked (Railway, Render, etc).
+  emailProvider       String   @default("smtp")
   smtpHost            String   @default("")
   smtpPort            Int      @default(587)
   smtpUser            String   @default("")
   // Encrypted with AES-256-GCM. See app/lib/crypto.server.ts.
   smtpPassEncrypted   String   @default("")
+  resendApiKeyEncrypted String @default("")
   // Comma-separated list of merchant notification recipients.
   notificationEmails  String   @default("")
+  // When false, skip the merchant notification entirely (only the customer gets a confirmation).
+  sendMerchantNotification Boolean @default(true)
+  // Optional logo URL prepended at the top of every HTML email.
+  logoUrl             String   @default("")
   customerSubject     String   @default("")
   customerBody        String   @default("")
   merchantSubject     String   @default("")
