@@ -65,6 +65,11 @@ function buildTransport(settings: EmailSettings): Transporter | null {
     port: settings.smtpPort || 587,
     secure: (settings.smtpPort || 587) === 465,
     auth: { user: settings.smtpUser, pass: password },
+    // Defaults are way too generous (minutes). Cap each phase so a
+    // misconfigured SMTP server can't keep a Railway worker tied up.
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 15000,
   });
 }
 
