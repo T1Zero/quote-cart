@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "b62160b04b2ee1266c1d09c7f5cfc3d6"
-name = "quote-cart"
+name = "QuoteCart"
 application_url = "https://quote-cart-extension-production.up.railway.app"
 embedded = true
 

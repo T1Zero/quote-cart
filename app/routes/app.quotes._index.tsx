@@ -1,13 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Link as RemixLink,
+  useFetcher,
   useLoaderData,
   useSearchParams,
   useNavigate,
 } from "@remix-run/react";
 import {
   Badge,
+  Banner,
   Card,
   ChoiceList,
   EmptyState,
@@ -15,9 +18,11 @@ import {
   IndexTable,
   Page,
   Text,
+  useIndexResourceState,
   useSetIndexFiltersMode,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 import { listQuotes, calculateQuoteValue } from "../lib/quote.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -42,16 +47,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") || "");
+
+  if (intent === "delete_quotes") {
+    const idsRaw = String(formData.get("ids") || "");
+    const ids = idsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (ids.length === 0) {
+      return json({ ok: false, error: "No quotes selected." });
+    }
+    // Cascade delete the quote (and via FK, items, custom field values, tracking events).
+    // Scoped by shopDomain to prevent cross-shop deletion attempts.
+    const result = await prisma.quote.deleteMany({
+      where: { id: { in: ids }, shopDomain: session.shop },
+    });
+    return json({ ok: true, deleted: result.count });
+  }
+
+  return json({ ok: false, error: "Unknown intent" }, { status: 400 });
+};
+
 export default function QuotesIndex() {
   const { quotes, status, search } = useLoaderData<typeof loader>();
   const [, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const deleteFetcher = useFetcher<{ ok: boolean; deleted?: number; error?: string }>();
 
   const [queryValue, setQueryValue] = useState(search);
   const [statusFilter, setStatusFilter] = useState<string[]>(
     status === "all" ? [] : [status],
   );
   const { mode, setMode } = useSetIndexFiltersMode();
+
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(
+    quotes.map((q) => ({ ...q, id: q.id })),
+  );
+
+  // Clear selection after a successful delete (the loader will re-run via Remix
+  // automatically because we used a fetcher.Form; we just sweep the selection state).
+  useEffect(() => {
+    if (deleteFetcher.data?.ok) {
+      clearSelection();
+    }
+  }, [deleteFetcher.data, clearSelection]);
 
   const applyFilters = useCallback(
     (q: string, statuses: string[]) => {
@@ -103,6 +151,22 @@ export default function QuotesIndex() {
     setSearchParams(new URLSearchParams(), { replace: true });
   }, [setSearchParams]);
 
+  const handleBulkDelete = useCallback(() => {
+    if (selectedResources.length === 0) return;
+    const noun = selectedResources.length === 1 ? "quote" : "quotes";
+    if (
+      !window.confirm(
+        `Delete ${selectedResources.length} ${noun}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    const fd = new FormData();
+    fd.set("intent", "delete_quotes");
+    fd.set("ids", selectedResources.join(","));
+    deleteFetcher.submit(fd, { method: "post" });
+  }, [selectedResources, deleteFetcher]);
+
   const filters = [
     {
       key: "status",
@@ -140,6 +204,7 @@ export default function QuotesIndex() {
       id={q.id}
       key={q.id}
       position={idx}
+      selected={selectedResources.includes(q.id)}
       onClick={() => navigate(`/app/quotes/${q.id}`)}
     >
       <IndexTable.Cell>
@@ -161,6 +226,15 @@ export default function QuotesIndex() {
 
   return (
     <Page title="Quotes" subtitle={`${quotes.length} total`}>
+      {deleteFetcher.data?.ok && deleteFetcher.data.deleted ? (
+        <Banner tone="success" onDismiss={() => {}}>
+          Deleted {deleteFetcher.data.deleted}{" "}
+          {deleteFetcher.data.deleted === 1 ? "quote" : "quotes"}.
+        </Banner>
+      ) : null}
+      {deleteFetcher.data && !deleteFetcher.data.ok && deleteFetcher.data.error ? (
+        <Banner tone="critical">{deleteFetcher.data.error}</Banner>
+      ) : null}
       <Card padding="0">
         <IndexFilters
           mode={mode}
@@ -180,7 +254,7 @@ export default function QuotesIndex() {
           sortSelected={[]}
           hideQueryField={false}
           hideFilters={false}
-          loading={false}
+          loading={deleteFetcher.state !== "idle"}
         />
         {quotes.length === 0 ? (
           <EmptyState
@@ -193,7 +267,16 @@ export default function QuotesIndex() {
           <IndexTable
             resourceName={{ singular: "quote", plural: "quotes" }}
             itemCount={quotes.length}
-            selectable={false}
+            selectedItemsCount={
+              allResourcesSelected ? "All" : selectedResources.length
+            }
+            onSelectionChange={handleSelectionChange}
+            promotedBulkActions={[
+              {
+                content: "Delete",
+                onAction: handleBulkDelete,
+              },
+            ]}
             headings={[
               { title: "Customer" },
               { title: "Email" },
