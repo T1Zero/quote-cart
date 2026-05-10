@@ -43,6 +43,101 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+// YouTube video URLs for each setup step. Replace these with real video links
+// once you've recorded the tutorials. Empty string = "coming soon" placeholder.
+const TUTORIAL_VIDEOS: Record<string, string> = {
+  productButton: "",     // e.g. "https://www.youtube.com/embed/abc123"
+  headerIcon: "",
+  email: "",
+  templates: "",
+  tracking: "",
+  translations: "",
+  testQuote: "",
+};
+
+function VideoPlaceholder({
+  src,
+  title,
+}: {
+  src: string;
+  title: string;
+}) {
+  if (src) {
+    return (
+      <Box
+        background="bg-surface-secondary"
+        borderRadius="300"
+        padding="0"
+      >
+        <div
+          style={{
+            position: "relative",
+            paddingBottom: "56.25%",
+            height: 0,
+            overflow: "hidden",
+            borderRadius: 8,
+          }}
+        >
+          <iframe
+            src={src}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              border: 0,
+            }}
+          />
+        </div>
+      </Box>
+    );
+  }
+  return (
+    <Box
+      background="bg-surface-secondary"
+      borderRadius="300"
+      borderWidth="025"
+      borderColor="border"
+      padding="600"
+    >
+      <BlockStack gap="200" inlineAlign="center">
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: "rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#5c5f62",
+          }}
+          aria-hidden="true"
+        >
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <Text as="p" variant="bodySm" fontWeight="semibold">
+          Tutorial video coming soon
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+          Step-by-step walkthrough video will appear here.
+        </Text>
+      </BlockStack>
+    </Box>
+  );
+}
+
 export default function SetupPage() {
   const { shopDomain, status } = useLoaderData<typeof loader>();
   const themeEditorUrl = `https://${shopDomain}/admin/themes/current/editor`;
@@ -110,6 +205,10 @@ export default function SetupPage() {
                   This is the button customers click to add a product to their
                   quote instead of buying it directly.
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.productButton}
+                  title="Add Add-to-Quote button to product page"
+                />
                 <List type="number">
                   <List.Item>
                     Click <strong>Open theme editor</strong> below.
@@ -159,6 +258,10 @@ export default function SetupPage() {
                   Lets customers open their quote from any page, with a count
                   badge that updates in real time.
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.headerIcon}
+                  title="Add basket icon to header"
+                />
                 <List type="number">
                   <List.Item>
                     In the theme editor, click the <strong>Header</strong>{" "}
@@ -207,6 +310,10 @@ export default function SetupPage() {
                   Without this, quotes are still <em>saved</em> but no email is
                   sent — neither the customer confirmation nor your notification.
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.email}
+                  title="Configure SMTP and notification recipients"
+                />
                 <List type="number">
                   <List.Item>
                     Go to <RemixLink to="/app/settings">Settings → Email sending</RemixLink>.
@@ -277,6 +384,10 @@ export default function SetupPage() {
                   Templates ship with sensible defaults in English and Bulgarian.
                   Edit them in <RemixLink to="/app/settings">Settings → Email templates</RemixLink>.
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.templates}
+                  title="Customize email templates"
+                />
                 <List type="bullet">
                   <List.Item>
                     Click any of the variable chips (<code>{`{{customer_name}}`}</code>,{" "}
@@ -312,6 +423,10 @@ export default function SetupPage() {
                   <code>event_id</code> for deduplication. Use these as your
                   conversion goal in your ad campaigns.
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.tracking}
+                  title="Set up ad tracking with Meta, GA4, and Google Ads"
+                />
                 <Text as="h3" variant="headingSm">
                   Where to find each value
                 </Text>
@@ -391,6 +506,10 @@ export default function SetupPage() {
                   Quote Cart ships translated to English and Bulgarian out of the
                   box. To add other languages or edit any string:
                 </Text>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.translations}
+                  title="Translate storefront strings"
+                />
                 <List type="number">
                   <List.Item>
                     Install Shopify's free{" "}
@@ -432,6 +551,10 @@ export default function SetupPage() {
                     <Badge tone="success">Verified</Badge>
                   ) : null}
                 </InlineStack>
+                <VideoPlaceholder
+                  src={TUTORIAL_VIDEOS.testQuote}
+                  title="Submit a test quote and verify"
+                />
                 <List type="number">
                   <List.Item>
                     On the storefront, open any product page and click{" "}

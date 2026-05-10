@@ -22,7 +22,6 @@ export default function App() {
         <Link to="/app" rel="home">
           Dashboard
         </Link>
-        <Link to="/app/quotes">Quotes</Link>
         <Link to="/app/fields">Custom fields</Link>
         <Link to="/app/setup">Setup guide</Link>
         <Link to="/app/settings">Settings</Link>

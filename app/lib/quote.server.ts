@@ -124,19 +124,64 @@ export async function getQuoteById(shopDomain: string, id: string) {
 }
 
 export async function getDashboardStats(shopDomain: string) {
-  const oneWeekAgo = new Date();
+  const now = new Date();
+  const oneWeekAgo = new Date(now);
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const twoWeeksAgo = new Date(now);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-  const [total, thisWeek, pending, recent] = await Promise.all([
+  const [total, thisWeek, lastWeek, pending, responded, recent, last14Raw] = await Promise.all([
     prisma.quote.count({ where: { shopDomain } }),
     prisma.quote.count({ where: { shopDomain, createdAt: { gte: oneWeekAgo } } }),
+    prisma.quote.count({
+      where: { shopDomain, createdAt: { gte: twoWeeksAgo, lt: oneWeekAgo } },
+    }),
     prisma.quote.count({ where: { shopDomain, status: "new" } }),
+    prisma.quote.count({ where: { shopDomain, status: "responded" } }),
     prisma.quote.findMany({
       where: { shopDomain },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 25,
       include: { items: true },
     }),
+    prisma.quote.findMany({
+      where: { shopDomain, createdAt: { gte: twoWeeksAgo } },
+      select: { createdAt: true },
+    }),
   ]);
-  return { total, thisWeek, pending, recent };
+
+  // Build a 14-element series of counts per day for the chart.
+  const series: { date: string; count: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const day = new Date(now);
+    day.setDate(day.getDate() - i);
+    day.setHours(0, 0, 0, 0);
+    const next = new Date(day);
+    next.setDate(next.getDate() + 1);
+    const count = last14Raw.filter(
+      (q) => q.createdAt >= day && q.createdAt < next,
+    ).length;
+    series.push({ date: day.toISOString().slice(0, 10), count });
+  }
+
+  // Week-over-week percentage change. null when last week was zero (no baseline).
+  let weekOverWeek: number | null = null;
+  if (lastWeek > 0) {
+    weekOverWeek = ((thisWeek - lastWeek) / lastWeek) * 100;
+  } else if (thisWeek > 0) {
+    weekOverWeek = 100;
+  } else {
+    weekOverWeek = 0;
+  }
+
+  return {
+    total,
+    thisWeek,
+    lastWeek,
+    pending,
+    responded,
+    recent,
+    series,
+    weekOverWeek,
+  };
 }
