@@ -46,9 +46,12 @@
 -%}
 
 <style>
+  /* Uses --qc-accent / --qc-on-accent / --qc-accent-hover from the launcher
+     embed when enabled (so brand colors apply everywhere). Falls back to
+     per-block settings when those CSS variables aren't set. */
   .qc-atq-{{ block.id }} {
-    background: {{ btn_color }};
-    color: {{ txt_color }};
+    background: var(--qc-accent, {{ btn_color }});
+    color: var(--qc-on-accent, {{ txt_color }});
     border-radius: {{ radius }}px;
     border: {{ border_width }}px solid {{ border_color | default: btn_color }};
     padding: 0 22px;
@@ -68,9 +71,11 @@
     line-height: 1;
     margin-top: 8px;
     font-family: inherit;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   .qc-atq-{{ block.id }}:hover {
-    {% if hover_bg != blank %}background: {{ hover_bg }};{% endif %}
+    background: var(--qc-accent-hover, {% if hover_bg != blank %}{{ hover_bg }}{% else %}var(--qc-accent, {{ btn_color }}){% endif %});
     {% if hover_txt != blank %}color: {{ hover_txt }};{% endif %}
     {% if hover_lift %}transform: translateY(-1px);{% endif %}
     box-shadow: {{ shadow_hover }};

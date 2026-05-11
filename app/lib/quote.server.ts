@@ -123,14 +123,32 @@ export async function getQuoteById(shopDomain: string, id: string) {
   });
 }
 
-export async function getDashboardStats(shopDomain: string) {
+export type DashboardRange = "7d" | "14d" | "30d" | "90d";
+
+export function rangeDays(range: DashboardRange): number {
+  if (range === "7d") return 7;
+  if (range === "14d") return 14;
+  if (range === "30d") return 30;
+  if (range === "90d") return 90;
+  return 14;
+}
+
+export async function getDashboardStats(
+  shopDomain: string,
+  range: DashboardRange = "14d",
+) {
   const now = new Date();
   const oneWeekAgo = new Date(now);
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const twoWeeksAgo = new Date(now);
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-  const [total, thisWeek, lastWeek, pending, responded, recent, last14Raw] = await Promise.all([
+  const days = rangeDays(range);
+  const rangeStart = new Date(now);
+  rangeStart.setDate(rangeStart.getDate() - (days - 1));
+  rangeStart.setHours(0, 0, 0, 0);
+
+  const [total, thisWeek, lastWeek, pending, responded, recent, rangeRaw] = await Promise.all([
     prisma.quote.count({ where: { shopDomain } }),
     prisma.quote.count({ where: { shopDomain, createdAt: { gte: oneWeekAgo } } }),
     prisma.quote.count({
@@ -145,22 +163,20 @@ export async function getDashboardStats(shopDomain: string) {
       include: { items: true },
     }),
     prisma.quote.findMany({
-      where: { shopDomain, createdAt: { gte: twoWeeksAgo } },
+      where: { shopDomain, createdAt: { gte: rangeStart } },
       select: { createdAt: true },
     }),
   ]);
 
-  // Build a 14-element series of counts per day for the chart.
+  // Build a series of counts per day for the chosen range.
   const series: { date: string; count: number }[] = [];
-  for (let i = 13; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const day = new Date(now);
     day.setDate(day.getDate() - i);
     day.setHours(0, 0, 0, 0);
     const next = new Date(day);
     next.setDate(next.getDate() + 1);
-    const count = last14Raw.filter(
-      (q) => q.createdAt >= day && q.createdAt < next,
-    ).length;
+    const count = rangeRaw.filter((q) => q.createdAt >= day && q.createdAt < next).length;
     series.push({ date: day.toISOString().slice(0, 10), count });
   }
 
@@ -182,6 +198,7 @@ export async function getDashboardStats(shopDomain: string) {
     responded,
     recent,
     series,
+    range,
     weekOverWeek,
   };
 }

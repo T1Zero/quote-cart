@@ -378,11 +378,55 @@
     return drawerEls;
   }
 
+  // Detect any element pinned to the top of the viewport (announcement bar /
+  // sticky header) and return its height. The drawer + overlay are offset by
+  // this so they don't sit behind the bar.
+  function measureTopBarOffset() {
+    var selectors = [
+      ".announcement-bar",
+      ".announcement",
+      "[data-section-type=\"announcement-bar\"]",
+      "[id*=\"announcement-bar\"]",
+      "[id*=\"shopify-section-announcement\"]",
+      "[class*=\"announcement-bar\"]",
+      ".header__announcement",
+      ".header-announcement"
+    ];
+    var maxBottom = 0;
+    for (var i = 0; i < selectors.length; i++) {
+      var els = document.querySelectorAll(selectors[i]);
+      for (var j = 0; j < els.length; j++) {
+        var el = els[j];
+        if (!el || !el.getBoundingClientRect) continue;
+        // Skip elements we already counted via a different selector.
+        if (el.__qcCounted) continue;
+        var rect = el.getBoundingClientRect();
+        // Only count things actually at the top of the viewport (within 5px)
+        // and with a reasonable height (announcement bars are usually 30-80px).
+        if (rect.top <= 5 && rect.height > 0 && rect.height < 200) {
+          el.__qcCounted = true;
+          maxBottom = Math.max(maxBottom, rect.bottom);
+        }
+      }
+    }
+    // Reset the marker so subsequent opens re-check.
+    setTimeout(function () {
+      var all = document.querySelectorAll("[data-qc-counted-tmp]");
+      for (var k = 0; k < all.length; k++) all[k].__qcCounted = false;
+    }, 0);
+    return Math.round(maxBottom);
+  }
+
   function openDrawer() {
     var els = getDrawerEls();
     if (!els.drawer) return;
     lastFocused = document.activeElement;
     if (els.btn) els.btn.setAttribute("aria-expanded", "true");
+    // Measure announcement bar each time — themes can show / hide it dynamically.
+    var topOffset = measureTopBarOffset();
+    var offsetValue = topOffset > 0 ? topOffset + "px" : "0px";
+    els.drawer.style.setProperty("--qc-top-offset", offsetValue);
+    if (els.overlay) els.overlay.style.setProperty("--qc-top-offset", offsetValue);
     els.drawer.classList.add("qc-active");
     els.overlay && els.overlay.classList.add("qc-active");
     els.drawer.setAttribute("aria-hidden", "false");

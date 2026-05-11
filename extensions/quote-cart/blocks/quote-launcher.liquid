@@ -11,12 +11,21 @@
   assign hide_when_empty = block.settings.hide_when_empty
   assign accent = block.settings.accent_color | default: '#111111'
   assign on_accent = block.settings.icon_color | default: '#ffffff'
+  assign accent_hover = block.settings.accent_hover_color
+  assign badge = block.settings.badge_color | default: '#d72c0d'
 -%}
 
+{%- comment -%}
+  Brand colors propagate to every Quote Cart block via CSS variables on :root.
+  Set these once on the launcher embed and the Add-to-Quote button + navbar
+  cart icon + drawer + popup all match.
+{%- endcomment -%}
 <style>
   :root {
     --qc-accent: {{ accent }};
     --qc-on-accent: {{ on_accent }};
+    --qc-accent-hover: {{ accent_hover | default: accent }};
+    --qc-badge-color: {{ badge }};
   }
 </style>
 
@@ -104,6 +113,14 @@
       "default": true
     },
     {
+      "type": "header",
+      "content": "t:settings.brand_colors_header"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:settings.brand_colors_info"
+    },
+    {
       "type": "color",
       "id": "accent_color",
       "label": "t:settings.accent_color",
@@ -114,6 +131,17 @@
       "id": "icon_color",
       "label": "t:settings.icon_color",
       "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "accent_hover_color",
+      "label": "t:settings.accent_hover_color"
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "t:settings.badge_color",
+      "default": "#d72c0d"
     }
   ]
 }

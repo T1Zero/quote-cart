@@ -9,6 +9,11 @@
   assign aria_label = 'drawer.your_quote' | t
 -%}
 
+{%- comment -%}
+  Color resolution order: per-block setting wins if set, else the brand
+  colors from the launcher embed (--qc-accent / --qc-badge-color).
+{%- endcomment -%}
+
 <button
   type="button"
   class="qc-navlink"
@@ -20,7 +25,7 @@
   {{ block.shopify_attributes }}
   style="
     {% if icon_color != blank %}--qc-navlink-icon: {{ icon_color }};{% endif %}
-    --qc-navlink-badge: {{ badge_color }};
+    --qc-navlink-badge: var(--qc-badge-color, {{ badge_color }});
   "
 >
   <span class="qc-navlink-icon-wrap" aria-hidden="true">
