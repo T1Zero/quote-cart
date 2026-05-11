@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useFetcher, useLoaderData } from "@remix-run/react";
@@ -566,13 +566,12 @@ function TemplatesTab({
                   onChange={setCustomerSubject}
                   autoComplete="off"
                 />
-                <TextField
+                <MarkdownEditor
                   label="Body"
                   name="customerBody"
                   value={customerBody}
                   onChange={setCustomerBody}
-                  multiline={10}
-                  autoComplete="off"
+                  rows={12}
                 />
                 <VarChips onInsert={(v) => insert(v, "customerBody")} />
               </BlockStack>
@@ -590,13 +589,12 @@ function TemplatesTab({
                   onChange={setMerchantSubject}
                   autoComplete="off"
                 />
-                <TextField
+                <MarkdownEditor
                   label="Body"
                   name="merchantBody"
                   value={merchantBody}
                   onChange={setMerchantBody}
-                  multiline={10}
-                  autoComplete="off"
+                  rows={12}
                 />
                 <VarChips onInsert={(v) => insert(v, "merchantBody")} />
               </BlockStack>
@@ -609,12 +607,7 @@ function TemplatesTab({
               <resetFetcher.Form method="post" style={{ display: "inline-block" }}>
                 <input type="hidden" name="intent" value="reset_templates" />
                 <input type="hidden" name="lang" value="en" />
-                <Button submit>Reset to English defaults</Button>
-              </resetFetcher.Form>
-              <resetFetcher.Form method="post" style={{ display: "inline-block" }}>
-                <input type="hidden" name="intent" value="reset_templates" />
-                <input type="hidden" name="lang" value="bg" />
-                <Button submit>Reset to Bulgarian defaults</Button>
+                <Button submit>Reset to defaults</Button>
               </resetFetcher.Form>
             </InlineStack>
           </BlockStack>
@@ -650,6 +643,215 @@ function TemplatesTab({
         </BlockStack>
       </InlineGrid>
     </BlockStack>
+  );
+}
+
+function MarkdownEditor({
+  label,
+  name,
+  value,
+  onChange,
+  rows = 10,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (next: string) => void;
+  rows?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const surround = useCallback(
+    (before: string, after = "") => {
+      const ta = ref.current;
+      if (!ta) {
+        onChange(`${value}${before}${after}`);
+        return;
+      }
+      const start = ta.selectionStart ?? value.length;
+      const end = ta.selectionEnd ?? value.length;
+      const selected = value.slice(start, end);
+      const next = value.slice(0, start) + before + selected + after + value.slice(end);
+      onChange(next);
+      // Restore selection / cursor inside the just-inserted markup.
+      requestAnimationFrame(() => {
+        ta.focus();
+        const cursor = start + before.length + selected.length;
+        ta.setSelectionRange(cursor, cursor);
+      });
+    },
+    [onChange, value],
+  );
+
+  const prependLine = useCallback(
+    (prefix: string) => {
+      const ta = ref.current;
+      if (!ta) {
+        onChange(`${prefix}${value}`);
+        return;
+      }
+      const start = ta.selectionStart ?? 0;
+      // Find the start of the current line.
+      const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+      const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
+      onChange(next);
+      requestAnimationFrame(() => {
+        ta.focus();
+        const cursor = start + prefix.length;
+        ta.setSelectionRange(cursor, cursor);
+      });
+    },
+    [onChange, value],
+  );
+
+  const insertLink = useCallback(() => {
+    const url = window.prompt("Link URL (https://...):");
+    if (!url) return;
+    surround("[", `](${url})`);
+  }, [surround]);
+
+  const insertImage = useCallback(() => {
+    const url = window.prompt(
+      "Image URL (https://...):\nUpload to Shopify Admin → Content → Files → copy URL.",
+    );
+    if (!url) return;
+    surround(`![image](${url})`, "");
+  }, [surround]);
+
+  return (
+    <div>
+      <label
+        htmlFor={`md-${name}`}
+        style={{
+          display: "block",
+          fontSize: 13,
+          fontWeight: 500,
+          color: "var(--p-color-text)",
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </label>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 4,
+          padding: "6px 8px",
+          background: "#f6f6f7",
+          border: "1px solid #d0d0d0",
+          borderBottom: "0",
+          borderRadius: "8px 8px 0 0",
+        }}
+      >
+        <ToolbarBtn label="B" title="Bold (Ctrl/Cmd+B)" onClick={() => surround("**", "**")} bold />
+        <ToolbarBtn label="I" title="Italic (Ctrl/Cmd+I)" onClick={() => surround("*", "*")} italic />
+        <ToolbarSep />
+        <ToolbarBtn label="H1" title="Heading 1" onClick={() => prependLine("# ")} />
+        <ToolbarBtn label="H2" title="Heading 2" onClick={() => prependLine("## ")} />
+        <ToolbarBtn label="H3" title="Heading 3" onClick={() => prependLine("### ")} />
+        <ToolbarSep />
+        <ToolbarBtn label="•" title="Bulleted list" onClick={() => prependLine("- ")} />
+        <ToolbarSep />
+        <ToolbarBtn label="🔗" title="Insert link" onClick={insertLink} />
+        <ToolbarBtn label="🖼" title="Insert image (paste URL)" onClick={insertImage} />
+        <ToolbarSep />
+        <ToolbarBtn
+          label="—"
+          title="Horizontal rule"
+          onClick={() => surround("\n\n---\n\n")}
+        />
+      </div>
+      <textarea
+        id={`md-${name}`}
+        ref={ref}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && (e.key === "b" || e.key === "B")) {
+            e.preventDefault();
+            surround("**", "**");
+          }
+          if ((e.metaKey || e.ctrlKey) && (e.key === "i" || e.key === "I")) {
+            e.preventDefault();
+            surround("*", "*");
+          }
+        }}
+        rows={rows}
+        spellCheck
+        autoComplete="off"
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          border: "1px solid #d0d0d0",
+          borderRadius: "0 0 8px 8px",
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          fontSize: 13,
+          lineHeight: 1.55,
+          resize: "vertical",
+          outline: "none",
+          boxSizing: "border-box",
+          background: "white",
+          color: "#1f1f1f",
+        }}
+      />
+      <div style={{ marginTop: 4, fontSize: 12, color: "#6b7177" }}>
+        Markdown: <code>**bold**</code> · <code>*italic*</code> · <code># heading</code> ·{" "}
+        <code>[text](url)</code> · <code>![alt](url)</code>. Plain text also works.
+      </div>
+    </div>
+  );
+}
+
+function ToolbarBtn({
+  label,
+  title,
+  onClick,
+  bold,
+  italic,
+}: {
+  label: string;
+  title: string;
+  onClick: () => void;
+  bold?: boolean;
+  italic?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      style={{
+        background: "white",
+        border: "1px solid #d0d0d0",
+        borderRadius: 6,
+        padding: "4px 10px",
+        fontSize: 12,
+        fontWeight: bold ? 700 : 500,
+        fontStyle: italic ? "italic" : "normal",
+        cursor: "pointer",
+        color: "#1f1f1f",
+        minWidth: 30,
+        height: 28,
+        lineHeight: 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ToolbarSep() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 1,
+        background: "#d0d0d0",
+        margin: "2px 4px",
+      }}
+    />
   );
 }
 

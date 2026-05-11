@@ -169,6 +169,17 @@
   transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   font-family: inherit;
   white-space: nowrap;
+  /* Crisper text rendering on macOS / iOS / Linux */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0.01em;
+}
+.qc-add-to-quote,
+[class^="qc-atq-"] {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 .qc-btn:active {
   transform: scale(0.98);
@@ -251,7 +262,11 @@
 /* ----------------- Drawer ----------------- */
 .qc-drawer-overlay {
   position: fixed;
-  inset: 0;
+  /* Same top offset as the drawer so the announcement bar stays visible above */
+  top: var(--qc-top-offset, 0);
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.42);
   opacity: 0;
   pointer-events: none;
@@ -266,10 +281,14 @@
 }
 .qc-drawer {
   position: fixed;
-  top: 0;
+  /* Top is offset by the height of any announcement bar / sticky header above it,
+     measured by JS on open. Defaults to 0 (no offset) when nothing is detected. */
+  top: var(--qc-top-offset, 0);
   right: 0;
-  height: 100vh;
+  height: calc(100vh - var(--qc-top-offset, 0px));
+  height: calc(100dvh - var(--qc-top-offset, 0px));
   width: min(420px, 92vw);
+  max-width: 100vw;
   background: var(--qc-bg);
   z-index: 999997;
   display: flex;
@@ -279,6 +298,10 @@
   box-shadow: var(--qc-shadow);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--qc-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
 }
 .qc-drawer.qc-active {
   transform: translateX(0);
@@ -328,21 +351,23 @@
 }
 .qc-drawer-item {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
   gap: 12px;
   padding: 14px 8px;
   border-bottom: 1px solid var(--qc-border);
   position: relative;
+  align-items: start;
 }
 .qc-drawer-item:last-child {
   border-bottom: 0;
 }
 .qc-drawer-item-thumb {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 8px;
   overflow: hidden;
   background: var(--qc-bg-secondary);
+  flex-shrink: 0;
 }
 .qc-drawer-item-thumb img {
   width: 100%;
@@ -352,6 +377,7 @@
 }
 .qc-drawer-item-info {
   min-width: 0;
+  overflow: hidden;
 }
 .qc-drawer-item-title {
   font-weight: 600;
@@ -360,6 +386,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+  word-break: break-word;
 }
 .qc-drawer-item-variant {
   display: block;
@@ -372,10 +400,13 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .qc-drawer-item-price {
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
 }
 .qc-drawer-item-remove {
   background: transparent;
@@ -456,6 +487,40 @@
 @media (max-width: 640px) {
   .qc-drawer {
     width: 100vw;
+    max-width: 100vw;
+  }
+  .qc-drawer-header {
+    padding: 16px 16px 12px;
+  }
+  .qc-drawer-title {
+    font-size: 17px;
+  }
+  .qc-drawer-items {
+    padding: 6px 10px 10px;
+  }
+  .qc-drawer-item {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px 4px;
+  }
+  .qc-drawer-item-thumb {
+    width: 52px;
+    height: 52px;
+  }
+  .qc-drawer-item-title {
+    font-size: 13px;
+  }
+  .qc-drawer-item-variant {
+    font-size: 11px;
+  }
+  .qc-drawer-item-price {
+    font-size: 13px;
+  }
+  .qc-drawer-footer {
+    padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .qc-drawer-actions {
+    gap: 8px;
   }
   .qc-popup {
     width: calc(100vw - 24px);
@@ -464,6 +529,24 @@
     flex-direction: column;
   }
   .qc-popup-actions .qc-btn {
+    width: 100%;
+  }
+}
+
+/* Even smaller phones (iPhone SE, narrow Androids ~360px) */
+@media (max-width: 380px) {
+  .qc-drawer-item {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .qc-drawer-item-thumb {
+    width: 44px;
+    height: 44px;
+  }
+  .qc-drawer-actions {
+    flex-direction: column;
+  }
+  .qc-drawer-actions .qc-btn {
     width: 100%;
   }
 }

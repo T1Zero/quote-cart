@@ -6,12 +6,15 @@ import {
   useFetcher,
   useLoaderData,
   useNavigate,
+  useSearchParams,
 } from "@remix-run/react";
 import {
   Badge,
   Banner,
   BlockStack,
   Box,
+  ButtonGroup,
+  Button,
   Card,
   EmptyState,
   IndexTable,
@@ -25,11 +28,20 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { getDashboardStats, calculateQuoteValue } from "../lib/quote.server";
+import {
+  getDashboardStats,
+  calculateQuoteValue,
+  type DashboardRange,
+} from "../lib/quote.server";
+
+const VALID_RANGES: DashboardRange[] = ["7d", "14d", "30d", "90d"];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
-  const stats = await getDashboardStats(session.shop);
+  const url = new URL(request.url);
+  const rawRange = (url.searchParams.get("range") || "14d") as DashboardRange;
+  const range = VALID_RANGES.includes(rawRange) ? rawRange : "14d";
+  const stats = await getDashboardStats(session.shop, range);
   return {
     stats: {
       total: stats.total,
@@ -39,6 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       responded: stats.responded,
       weekOverWeek: stats.weekOverWeek,
       series: stats.series,
+      range: stats.range,
     },
     recent: stats.recent.map((q) => ({
       id: q.id,
@@ -179,15 +192,13 @@ export default function Dashboard() {
         <Layout.Section>
           <Card>
             <BlockStack gap="300">
-              <InlineStack align="space-between" blockAlign="center">
+              <InlineStack align="space-between" blockAlign="center" wrap={false}>
                 <Text as="h2" variant="headingMd">
-                  Last 14 days
+                  Quotes over time
                 </Text>
-                <Text as="span" variant="bodySm" tone="subdued">
-                  Quotes per day
-                </Text>
+                <RangeSelector current={stats.range} />
               </InlineStack>
-              <SparklineChart series={stats.series} />
+              <SparklineChart series={stats.series} range={stats.range} />
             </BlockStack>
           </Card>
         </Layout.Section>
@@ -306,57 +317,143 @@ function StatCard({
   );
 }
 
-function SparklineChart({ series }: { series: { date: string; count: number }[] }) {
-  const max = Math.max(1, ...series.map((s) => s.count));
-  const width = 100;
-  const height = 28;
-  const barWidth = width / series.length;
-  const padBetween = 1;
+function RangeSelector({ current }: { current: string }) {
+  const [, setSearchParams] = useSearchParams();
+  const options: { label: string; value: string }[] = [
+    { label: "7 days", value: "7d" },
+    { label: "14 days", value: "14d" },
+    { label: "30 days", value: "30d" },
+    { label: "90 days", value: "90d" },
+  ];
+
+  function pick(value: string) {
+    const params = new URLSearchParams();
+    params.set("range", value);
+    setSearchParams(params, { replace: true });
+  }
 
   return (
-    <Box>
-      <svg
-        viewBox={`0 0 ${width} ${height + 12}`}
-        preserveAspectRatio="none"
-        style={{ width: "100%", height: "auto", maxHeight: 140 }}
-        role="img"
-        aria-label="Daily quote submissions for the last 14 days"
-      >
-        {series.map((point, i) => {
-          const h = (point.count / max) * height;
-          const x = i * barWidth;
-          const y = height - h;
-          const isToday = i === series.length - 1;
-          return (
-            <g key={point.date}>
-              <title>
-                {point.date}: {point.count} {point.count === 1 ? "quote" : "quotes"}
-              </title>
-              <rect
-                x={x + padBetween / 2}
-                y={y}
-                width={Math.max(0, barWidth - padBetween)}
-                height={Math.max(0.6, h)}
-                rx={0.4}
-                fill={isToday ? "#1f1f1f" : "#9aa1a8"}
-                opacity={point.count === 0 ? 0.25 : 1}
-              />
-              {(i === 0 || i === series.length - 1) && (
-                <text
-                  x={x + barWidth / 2}
-                  y={height + 9}
-                  textAnchor="middle"
-                  fontSize={3}
-                  fill="#6b7177"
-                >
-                  {formatDayLabel(point.date)}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </Box>
+    <ButtonGroup variant="segmented">
+      {options.map((opt) => (
+        <Button
+          key={opt.value}
+          pressed={current === opt.value}
+          onClick={() => pick(opt.value)}
+          size="slim"
+        >
+          {opt.label}
+        </Button>
+      ))}
+    </ButtonGroup>
+  );
+}
+
+function SparklineChart({
+  series,
+  range,
+}: {
+  series: { date: string; count: number }[];
+  range: string;
+}) {
+  // Don't render an empty chart if for some reason the series is blank.
+  if (series.length === 0) {
+    return (
+      <Box minHeight="120px" padding="400">
+        <Text as="p" variant="bodySm" tone="subdued">
+          No data to show.
+        </Text>
+      </Box>
+    );
+  }
+
+  const max = Math.max(1, ...series.map((s) => s.count));
+  const total = series.reduce((s, p) => s + p.count, 0);
+
+  // Render each bar as a fixed-pixel height SVG so longer ranges don't squash labels.
+  // Using non-stretched viewBox (preserveAspectRatio xMidYMid) keeps text legible.
+  const barWidth = 24;
+  const barGap = 4;
+  const chartHeight = 120;
+  const labelHeight = 22;
+  const totalWidth = series.length * (barWidth + barGap);
+  const viewBoxW = totalWidth;
+  const viewBoxH = chartHeight + labelHeight;
+
+  return (
+    <BlockStack gap="200">
+      <InlineStack gap="400" blockAlign="baseline">
+        <Text as="span" variant="heading2xl">
+          {total}
+        </Text>
+        <Text as="span" variant="bodySm" tone="subdued">
+          {total === 1 ? "quote" : "quotes"} in the last{" "}
+          {range === "7d" ? "7 days" : range === "30d" ? "30 days" : range === "90d" ? "90 days" : "14 days"}
+        </Text>
+      </InlineStack>
+      <Box>
+        <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+          <svg
+            viewBox={`0 0 ${viewBoxW} ${viewBoxH}`}
+            width={Math.max(360, totalWidth)}
+            height={viewBoxH}
+            style={{ maxWidth: "100%", height: "auto" }}
+            role="img"
+            aria-label={`Daily quote submissions for the last ${series.length} days`}
+          >
+            {series.map((point, i) => {
+              const h = (point.count / max) * chartHeight;
+              const x = i * (barWidth + barGap);
+              const y = chartHeight - h;
+              const isToday = i === series.length - 1;
+              const showLabel =
+                series.length <= 14 ||
+                i === 0 ||
+                i === series.length - 1 ||
+                i % Math.ceil(series.length / 8) === 0;
+              return (
+                <g key={point.date}>
+                  <title>
+                    {point.date}: {point.count} {point.count === 1 ? "quote" : "quotes"}
+                  </title>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={Math.max(2, h)}
+                    rx={3}
+                    fill={isToday ? "#1f1f1f" : "#9aa1a8"}
+                    opacity={point.count === 0 ? 0.25 : 1}
+                  />
+                  {point.count > 0 && (
+                    <text
+                      x={x + barWidth / 2}
+                      y={y - 4}
+                      textAnchor="middle"
+                      fontSize={11}
+                      fill="#1f1f1f"
+                      fontWeight="600"
+                    >
+                      {point.count}
+                    </text>
+                  )}
+                  {showLabel && (
+                    <text
+                      x={x + barWidth / 2}
+                      y={chartHeight + 14}
+                      textAnchor="middle"
+                      fontSize={10}
+                      fill="#6b7177"
+                    >
+                      {formatDayLabel(point.date)}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </Box>
+    </BlockStack>
   );
 }
 
