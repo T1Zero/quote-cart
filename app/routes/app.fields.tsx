@@ -133,32 +133,41 @@ function FieldList({
         {f.required ? <Badge tone="attention">Required</Badge> : <Badge>Optional</Badge>}
       </IndexTable.Cell>
       <IndexTable.Cell>
-        <InlineStack gap="200">
-          <Button onClick={() => onEdit(f)} size="slim">
-            Edit
-          </Button>
-          <deleteFetcher.Form
-            method="post"
-            style={{ display: "inline-block" }}
-            onSubmit={(e) => {
-              if (!window.confirm(`Delete the "${f.label}" field?`)) {
-                e.preventDefault();
-              }
-            }}
-          >
-            <input type="hidden" name="intent" value="delete_field" />
-            <input type="hidden" name="id" value={f.id} />
-            <Button
-              submit
-              size="slim"
-              tone="critical"
-              variant="plain"
-              loading={deleteFetcher.state !== "idle"}
-            >
-              Delete
+        {/* Stop clicks from bubbling to the row (whose onClick opens the editor).
+            Without this, clicking Delete confirms then immediately reopens the
+            editor for the deleted row, making the delete look like it didn't fire. */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <InlineStack gap="200">
+            <Button onClick={() => onEdit(f)} size="slim">
+              Edit
             </Button>
-          </deleteFetcher.Form>
-        </InlineStack>
+            <deleteFetcher.Form
+              method="post"
+              style={{ display: "inline-block" }}
+              onSubmit={(e) => {
+                e.stopPropagation();
+                if (!window.confirm(`Delete the "${f.label}" field?`)) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="intent" value="delete_field" />
+              <input type="hidden" name="id" value={f.id} />
+              <Button
+                submit
+                size="slim"
+                tone="critical"
+                variant="plain"
+                loading={deleteFetcher.state !== "idle"}
+              >
+                Delete
+              </Button>
+            </deleteFetcher.Form>
+          </InlineStack>
+        </div>
       </IndexTable.Cell>
     </IndexTable.Row>
   ));
