@@ -277,20 +277,56 @@ function renderTemplate(args: RenderArgs): string {
     .qc-submit-pg { transition: none !important; }
   }
 
-  /* Country-code phone input (intl-tel-input) — match our card aesthetic */
-  .iti { width: 100%; }
-  .iti__country-list { font-family: inherit; font-size: 14px; max-height: 240px; }
-  .iti--separate-dial-code .iti__selected-flag { background-color: #f7f7f7; border-radius: 8px 0 0 8px; }
+  /* Country-code phone input (intl-tel-input v25) — match our card aesthetic */
+  .iti { width: 100%; display: block; }
+  .iti__tel-input { width: 100%; }
+  .iti__country-container { z-index: 5; }
+  .iti__dropdown-content {
+    font-family: inherit;
+    font-size: 14px;
+    max-height: 280px;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+    border: 1px solid #d0d0d0;
+    background: #fff;
+  }
+  .iti__country-list { max-height: 240px; }
+  .iti__country { padding: 8px 10px; }
   .iti__country.iti__highlight { background-color: #f0f0f0; }
-  .qc-field-pg .iti input[type=tel] { padding-left: 90px !important; }
+  .iti__flag { transform: scale(1.05); transform-origin: left center; }
+  .iti__search-input {
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid #ececec;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+  }
+  .iti--separate-dial-code .iti__selected-dial-code {
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+  .iti--show-flags.iti--allow-dropdown .iti__country-container {
+    padding: 0 8px;
+  }
+  .qc-field-pg .iti input[type=tel] {
+    padding-left: 92px !important;
+  }
   @media (max-width: 640px) {
-    .qc-field-pg .iti input[type=tel] { padding-left: 86px !important; font-size: 16px !important; }
+    .qc-field-pg .iti input[type=tel] {
+      padding-left: 88px !important;
+      font-size: 16px !important;
+    }
+    .iti__dropdown-content {
+      max-height: 60vh;
+    }
   }
 </style>
 
 <link
   rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/css/intlTelInput.min.css"
+  href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/css/intlTelInput.min.css"
 />
 
 <div class="qc-page-wrap">
@@ -419,7 +455,7 @@ function renderGtag(ga4Id: string, googleAdsId: string): string {
 function renderInlinePageScript(): string {
   // Wrapped in {% raw %} so Liquid doesn't try to parse `{{` patterns inside
   // user data once the script runs. The script body itself is plain JS.
-  return `<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js" defer></script>
+  return `<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/intlTelInput.min.js" defer></script>
 {% raw %}<script>
 (function(){
   var QC = window.QUOTE_CART_PAGE || {};
@@ -427,6 +463,8 @@ function renderInlinePageScript(): string {
   var GCLID_KEY = "quote_cart_gclid";
 
   // Initialize country-code phone picker once intl-tel-input has loaded.
+  // v25+ renders flags as inline SVG (no sprite image dependency) and enables
+  // countrySearch by default so the merchant's customers can type to filter.
   // Falls back to a plain tel input if the CDN is blocked.
   var phoneIti = null;
   function initPhone(){
@@ -441,9 +479,13 @@ function renderInlinePageScript(): string {
             .then(function(data){ success(data && data.country_code ? data.country_code : "us"); })
             .catch(function(){ success("us"); });
         },
-        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js",
+        loadUtilsOnInit: "https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/utils.js",
         separateDialCode: true,
         autoPlaceholder: "polite",
+        countrySearch: true,
+        formatAsYouType: true,
+        showFlags: true,
+        useFullscreenPopup: false,
       });
     } catch (e) { phoneIti = null; }
   }
