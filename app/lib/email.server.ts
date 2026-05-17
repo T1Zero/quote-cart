@@ -164,15 +164,50 @@ async function sendViaResend(
   }
 }
 
+// Consumer domains can't be used as the technical "From" with Resend because
+// you can't verify ownership of @gmail.com / @yahoo.com / etc. — Resend rejects
+// the send. Detect those and route the technical from through onboarding@resend.dev,
+// while preserving the merchant's display name. The merchant's address still
+// surfaces via Reply-To so replies land in their inbox.
+const CONSUMER_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.co.uk",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "icloud.com",
+  "me.com",
+  "aol.com",
+  "abv.bg",
+  "mail.bg",
+  "protonmail.com",
+  "proton.me",
+]);
+
+function isConsumerEmail(email: string): boolean {
+  const domain = (email.split("@")[1] || "").toLowerCase().trim();
+  return !!domain && CONSUMER_EMAIL_DOMAINS.has(domain);
+}
+
 function buildFromAddress(settings: EmailSettings): string {
-  if (settings.senderEmail) {
-    if (settings.senderName) {
-      return `"${settings.senderName.replace(/"/g, "")}" <${settings.senderEmail}>`;
+  const displayName = (settings.senderName || "QuoteCart").replace(/"/g, "");
+
+  if (settings.emailProvider === "resend") {
+    // If the merchant typed a consumer-domain email (gmail etc.), Resend can't
+    // send from it — fall back to their test sender. The merchant's email is
+    // still used as Reply-To on customer messages (see sendQuoteEmails).
+    if (!settings.senderEmail || isConsumerEmail(settings.senderEmail)) {
+      return `"${displayName}" <onboarding@resend.dev>`;
     }
-    return settings.senderEmail;
+    return `"${displayName}" <${settings.senderEmail}>`;
   }
-  // Fallback: SMTP user (often the email itself for Gmail) or Resend's onboarding sender.
-  if (settings.emailProvider === "resend") return "onboarding@resend.dev";
+
+  // SMTP path: can send from any address the SMTP server accepts.
+  if (settings.senderEmail) {
+    return `"${displayName}" <${settings.senderEmail}>`;
+  }
   return settings.smtpUser;
 }
 
@@ -201,9 +236,16 @@ export async function sendQuoteEmails(
   );
   const customerHtml = wrapEmailHtml(customerBodyHtmlInner, { logoUrl: settings.logoUrl });
 
+  // Set Reply-To on the customer confirmation to the merchant's own email
+  // (typically a Gmail address). When the customer hits Reply, it lands in
+  // the merchant's inbox even though the technical From might be the Resend
+  // test sender.
+  const customerReplyTo = settings.senderEmail || undefined;
+
   const customerResult = await sendOne(settings, {
     from: fromAddress,
     to: fullQuote.customerEmail,
+    replyTo: customerReplyTo,
     subject: customerSubject,
     text: customerBodyText,
     html: customerHtml,
