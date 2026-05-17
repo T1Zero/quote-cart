@@ -1,7 +1,11 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { getOrInitTrackingSettings } from "../lib/tracking.server";
-import { listCustomFields, type FieldDescriptor } from "../lib/customField.server";
+import {
+  listCustomFields,
+  localizeField,
+  type FieldDescriptor,
+} from "../lib/customField.server";
 
 /**
  * App Proxy entry point: GET /apps/quote
@@ -20,12 +24,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const tracking = shopDomain
     ? await getOrInitTrackingSettings(shopDomain)
     : null;
-  const customFields = shopDomain ? await listCustomFields(shopDomain) : [];
+  const rawFields = shopDomain ? await listCustomFields(shopDomain) : [];
 
   const url = new URL(request.url);
   const currency = (url.searchParams.get("c") || "USD").toUpperCase();
   const lang = (url.searchParams.get("lang") || "en").toLowerCase();
   const t = lang === "bg" ? STRINGS.bg : STRINGS.en;
+
+  // Apply per-language overrides on each custom field before rendering.
+  // Falls back to the default label/placeholder/options when no translation exists.
+  const customFields: FieldDescriptor[] = rawFields.map((f) => {
+    const localized = localizeField(f, lang);
+    return {
+      ...f,
+      label: localized.label,
+      placeholder: localized.placeholder,
+      options: localized.options,
+    };
+  });
 
   const template = renderTemplate({
     t,

@@ -49,6 +49,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       placeholder: String(formData.get("placeholder") || ""),
       required: formData.get("required") === "on",
       position: parseInt(String(formData.get("position") || "0"), 10) || 0,
+      labelTranslations: { bg: String(formData.get("labelTranslations_bg") || "") },
+      placeholderTranslations: { bg: String(formData.get("placeholderTranslations_bg") || "") },
+      optionsRawTranslations: { bg: String(formData.get("optionsRawTranslations_bg") || "") },
     });
     return json(result);
   }
@@ -206,6 +209,13 @@ function FieldForm({
   );
   const [placeholder, setPlaceholder] = useState(field?.placeholder ?? "");
   const [required, setRequired] = useState(field?.required ?? false);
+  const [labelBg, setLabelBg] = useState(field?.labelTranslations?.bg ?? "");
+  const [placeholderBg, setPlaceholderBg] = useState(
+    field?.placeholderTranslations?.bg ?? "",
+  );
+  const [optionsRawBg, setOptionsRawBg] = useState(
+    field?.optionsTranslations?.bg?.join("\n") ?? "",
+  );
 
   const isSelect = fieldType === "select";
 
@@ -277,6 +287,45 @@ function FieldForm({
               onChange={setRequired}
               helpText="The customer can't submit the quote without filling this in."
             />
+
+            <Box paddingBlockStart="200">
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">
+                  Bulgarian translation (optional)
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Shown to customers browsing your store in Bulgarian. Leave blank
+                  to fall back to the default label.
+                </Text>
+                <TextField
+                  label="Label (Bulgarian)"
+                  name="labelTranslations_bg"
+                  value={labelBg}
+                  onChange={setLabelBg}
+                  autoComplete="off"
+                  placeholder={label ? `e.g., translation of "${label}"` : ""}
+                />
+                <TextField
+                  label="Placeholder (Bulgarian)"
+                  name="placeholderTranslations_bg"
+                  value={placeholderBg}
+                  onChange={setPlaceholderBg}
+                  autoComplete="off"
+                />
+                {isSelect && (
+                  <TextField
+                    label="Options (Bulgarian)"
+                    name="optionsRawTranslations_bg"
+                    value={optionsRawBg}
+                    onChange={setOptionsRawBg}
+                    multiline={4}
+                    autoComplete="off"
+                    helpText="One option per line, in the SAME order as the default options above."
+                  />
+                )}
+              </BlockStack>
+            </Box>
+
             <InlineStack gap="200">
               <Button submit variant="primary" loading={fetcher.state !== "idle"}>
                 {field ? "Save changes" : "Add field"}

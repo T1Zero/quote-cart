@@ -107,12 +107,17 @@ model Quote {
 model CustomField {
   id          String   @id @default(cuid())
   shopDomain  String
-  label       String                       // Visible to the customer
+  label       String                       // Default (e.g., English) label shown to the customer
   fieldType   String   @default("text")    // text | textarea | email | tel | select
   options     String   @default("")        // JSON-encoded string array (for select)
   placeholder String   @default("")
   required    Boolean  @default(false)
   position    Int      @default(0)
+  // Per-language overrides. JSON-encoded { "bg": "...", "fr": "..." } etc.
+  // Storefront picks the right one based on ?lang= or the customer's storefront locale.
+  labelTranslations       String @default("{}")
+  placeholderTranslations String @default("{}")
+  optionsTranslations     String @default("{}")  // JSON: { "bg": ["опция 1", "опция 2"] }
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

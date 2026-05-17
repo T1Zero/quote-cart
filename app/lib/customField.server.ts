@@ -21,7 +21,30 @@ export type FieldDescriptor = {
   placeholder: string;
   required: boolean;
   position: number;
+  labelTranslations: Record<string, string>;
+  placeholderTranslations: Record<string, string>;
+  optionsTranslations: Record<string, string[]>;
 };
+
+/**
+ * Pick the right label / placeholder / options for the active storefront language.
+ * Falls back to the default (English) value when there's no translation.
+ */
+export function localizeField(field: FieldDescriptor, lang: string): {
+  label: string;
+  placeholder: string;
+  options: string[];
+} {
+  const code = (lang || "").toLowerCase().slice(0, 2);
+  const label = field.labelTranslations[code] || field.label;
+  const placeholder = field.placeholderTranslations[code] || field.placeholder;
+  const translatedOptions = field.optionsTranslations[code];
+  const options =
+    Array.isArray(translatedOptions) && translatedOptions.length === field.options.length
+      ? translatedOptions
+      : field.options;
+  return { label, placeholder, options };
+}
 
 const VALID_TYPES: FieldType[] = ["text", "textarea", "email", "tel", "select"];
 
@@ -53,7 +76,46 @@ function toDescriptor(row: CustomField): FieldDescriptor {
     placeholder: row.placeholder,
     required: row.required,
     position: row.position,
+    labelTranslations: parseStringMap(row.labelTranslations),
+    placeholderTranslations: parseStringMap(row.placeholderTranslations),
+    optionsTranslations: parseOptionsMap(row.optionsTranslations),
   };
+}
+
+function parseStringMap(raw: string): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === "string") out[k.toLowerCase()] = v;
+      }
+      return out;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function parseOptionsMap(raw: string): Record<string, string[]> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (Array.isArray(v)) {
+          out[k.toLowerCase()] = v.filter((s): s is string => typeof s === "string");
+        }
+      }
+      return out;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
 }
 
 export type SaveFieldInput = {
@@ -64,6 +126,10 @@ export type SaveFieldInput = {
   placeholder: string;
   required: boolean;
   position: number;
+  // Translations — keys are 2-letter language codes (e.g., "bg"). Empty values are ignored.
+  labelTranslations?: Record<string, string>;
+  placeholderTranslations?: Record<string, string>;
+  optionsRawTranslations?: Record<string, string>;
 };
 
 export function parseOptionsRaw(raw: string): string[] {
@@ -88,6 +154,22 @@ export async function upsertCustomField(
     return { ok: false, error: "Dropdown fields need at least one option." };
   }
 
+  const labelTranslations = filterStringMap(input.labelTranslations);
+  const placeholderTranslations = filterStringMap(input.placeholderTranslations);
+
+  // optionsRawTranslations is provided as { "bg": "Опция 1\nОпция 2" }.
+  // Parse each into a string[] and only persist if the parsed count matches
+  // the default options count (so they line up positionally).
+  const optionsTranslationsParsed: Record<string, string[]> = {};
+  if (fieldType === "select" && input.optionsRawTranslations) {
+    for (const [code, raw] of Object.entries(input.optionsRawTranslations)) {
+      const arr = parseOptionsRaw(raw);
+      if (arr.length === optionsArr.length && arr.length > 0) {
+        optionsTranslationsParsed[code.toLowerCase()] = arr;
+      }
+    }
+  }
+
   const data = {
     label,
     fieldType,
@@ -95,6 +177,9 @@ export async function upsertCustomField(
     placeholder: (input.placeholder || "").trim(),
     required: input.required,
     position: Math.max(0, Math.floor(input.position)),
+    labelTranslations: JSON.stringify(labelTranslations),
+    placeholderTranslations: JSON.stringify(placeholderTranslations),
+    optionsTranslations: JSON.stringify(optionsTranslationsParsed),
   };
 
   if (input.id) {
@@ -113,6 +198,17 @@ export async function upsertCustomField(
     data: { shopDomain, ...data },
   });
   return { ok: true, id: created.id };
+}
+
+function filterStringMap(input?: Record<string, string>): Record<string, string> {
+  if (!input) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (typeof v === "string" && v.trim()) {
+      out[k.toLowerCase().slice(0, 2)] = v.trim();
+    }
+  }
+  return out;
 }
 
 export async function deleteCustomField(shopDomain: string, id: string) {
