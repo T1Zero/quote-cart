@@ -39,6 +39,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       customerEmail: quote.customerEmail,
       customerPhone: quote.customerPhone,
       message: quote.message,
+      customerType: quote.customerType,
+      vatNumber: quote.vatNumber,
       status: quote.status,
       internalNotes: quote.internalNotes,
       createdAt: quote.createdAt.toISOString(),
@@ -315,6 +317,16 @@ export default function QuoteDetail() {
                   <Text as="p" variant="bodySm">
                     <a href={`tel:${quote.customerPhone}`}>{quote.customerPhone}</a>
                   </Text>
+                  {quote.customerType ? (
+                    <Text as="p" variant="bodySm">
+                      <strong>
+                        {quote.customerType === "company" ? "Company" : "Individual"}
+                      </strong>
+                      {quote.customerType === "company" && quote.vatNumber
+                        ? ` · VAT: ${quote.vatNumber}`
+                        : ""}
+                    </Text>
+                  ) : null}
                 </BlockStack>
                 <InlineStack gap="200">
                   <Button url={mailto} variant="primary">

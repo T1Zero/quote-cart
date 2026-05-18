@@ -87,6 +87,10 @@ model Quote {
   customerEmail         String
   customerPhone         String
   message               String        @default("")
+  // "" | "individual" | "company". Empty for old quotes from before this field existed.
+  customerType          String        @default("")
+  // VAT / tax number — only collected when customerType is "company".
+  vatNumber             String        @default("")
   status                String        @default("new") // new | responded | closed
   internalNotes         String        @default("")
   createdAt             DateTime      @default(now())

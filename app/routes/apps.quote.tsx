@@ -74,6 +74,11 @@ const STRINGS = {
     nameLabel: "Name",
     emailLabel: "Email",
     phoneLabel: "Phone",
+    customerTypeLabel: "Are you an individual or a company?",
+    individualOption: "Individual",
+    companyOption: "Company",
+    vatLabel: "VAT / tax number",
+    vatPlaceholder: "e.g., BG123456789",
     notesLabel: "Additional notes or questions",
     submit: "Submit Quote Request",
     sending: "Sending…",
@@ -84,6 +89,8 @@ const STRINGS = {
     nameRequired: "Please enter your name.",
     emailRequired: "Please enter a valid email.",
     phoneRequired: "Please enter your phone number.",
+    customerTypeRequired: "Please tell us whether you're an individual or a company.",
+    vatRequired: "Please enter your company VAT / tax number.",
     emptyError: "Add at least one product to your quote first.",
   },
   bg: {
@@ -100,6 +107,11 @@ const STRINGS = {
     nameLabel: "Име",
     emailLabel: "Имейл",
     phoneLabel: "Телефон",
+    customerTypeLabel: "Физическо лице или фирма?",
+    individualOption: "Физическо лице",
+    companyOption: "Фирма",
+    vatLabel: "ЕИК / ДДС номер",
+    vatPlaceholder: "напр., BG123456789",
     notesLabel: "Допълнителни бележки или въпроси",
     submit: "Изпрати заявка за оферта",
     sending: "Изпращане…",
@@ -110,6 +122,8 @@ const STRINGS = {
     nameRequired: "Моля, въведете име.",
     emailRequired: "Моля, въведете валиден имейл.",
     phoneRequired: "Моля, въведете телефонен номер.",
+    customerTypeRequired: "Моля, посочете дали сте физическо лице или фирма.",
+    vatRequired: "Моля, въведете ЕИК / ДДС номер на фирмата.",
     emptyError: "Добавете поне един продукт към заявката.",
   },
 };
@@ -167,6 +181,30 @@ function renderTemplate(args: RenderArgs): string {
   .qc-field-pg input:focus,.qc-field-pg textarea:focus { outline:none; border-color:#1a1a1a; box-shadow:0 0 0 3px rgba(0,0,0,.08); }
   .qc-field-pg textarea { min-height:96px; resize:vertical; }
   .qc-field-pg.qc-invalid input,.qc-field-pg.qc-invalid textarea { border-color:#d72c0d; box-shadow:0 0 0 3px rgba(215,44,13,.12); }
+  .qc-field-pg input[type=radio] { width:auto; padding:0; margin:0; }
+  .qc-radio-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .qc-radio-option {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1;
+    min-width:140px;
+    padding:12px 14px;
+    border:1px solid #d6d6d6;
+    border-radius:10px;
+    cursor:pointer;
+    transition:border-color .15s, background .15s, box-shadow .15s;
+    background:#fff;
+    font-size:14px;
+    font-weight:500;
+  }
+  .qc-radio-option:hover { border-color:#1a1a1a; }
+  .qc-radio-option:has(input:checked) {
+    border-color:#1a1a1a;
+    background:#fafafa;
+    box-shadow:0 0 0 3px rgba(0,0,0,.06);
+  }
+  .qc-field-pg.qc-invalid .qc-radio-option { border-color:#d72c0d; }
   .qc-field-error-pg { color:#d72c0d; font-size:12px; margin-top:6px; display:none; }
   .qc-field-pg.qc-invalid .qc-field-error-pg { display:block; }
   .qc-submit-pg { display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 24px; background:#111; color:#fff; border:0; border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; transition:transform .1s, background .15s; font-family:inherit; }
@@ -402,6 +440,28 @@ function renderTemplate(args: RenderArgs): string {
           <input id="qc-phone" name="customerPhone" type="tel" required autocomplete="tel" />
           <div class="qc-field-error-pg">${escape(t.phoneRequired)}</div>
         </div>
+
+        <div class="qc-field-pg" id="qc-field-customerType" style="grid-column:1/-1">
+          <label>${escape(t.customerTypeLabel)} *</label>
+          <div class="qc-radio-row">
+            <label class="qc-radio-option">
+              <input type="radio" name="customerType" value="individual" id="qc-ct-individual" />
+              <span>${escape(t.individualOption)}</span>
+            </label>
+            <label class="qc-radio-option">
+              <input type="radio" name="customerType" value="company" id="qc-ct-company" />
+              <span>${escape(t.companyOption)}</span>
+            </label>
+          </div>
+          <div class="qc-field-error-pg">${escape(t.customerTypeRequired)}</div>
+        </div>
+
+        <div class="qc-field-pg" id="qc-field-vat" style="grid-column:1/-1;display:none">
+          <label for="qc-vat">${escape(t.vatLabel)} *</label>
+          <input id="qc-vat" name="vatNumber" type="text" placeholder="${escape(t.vatPlaceholder)}" autocomplete="off" />
+          <div class="qc-field-error-pg">${escape(t.vatRequired)}</div>
+        </div>
+
         <div class="qc-field-pg" style="grid-column:1/-1">
           <label for="qc-message">${escape(t.notesLabel)}</label>
           <textarea id="qc-message" name="message"></textarea>
@@ -521,6 +581,15 @@ function renderInlinePageScript(): string {
       else if (++tries > 40) clearInterval(iv);
     }, 50);
   }
+
+  // Toggle VAT field visibility based on the selected customer type.
+  document.addEventListener("change", function(e){
+    if(e.target && e.target.name === "customerType"){
+      var vat = document.getElementById("qc-field-vat");
+      if(!vat) return;
+      vat.style.display = e.target.value === "company" ? "block" : "none";
+    }
+  });
 
   function safeRead(){
     try{
@@ -668,6 +737,21 @@ function renderInlinePageScript(): string {
     }
     set("phone", phoneOk);
 
+    // Customer type: must be picked. VAT: required if "company".
+    var ctRadios = document.querySelectorAll('input[name="customerType"]');
+    var customerType = "";
+    for(var ci=0; ci<ctRadios.length; ci++){
+      if(ctRadios[ci].checked){ customerType = ctRadios[ci].value; break; }
+    }
+    set("customerType", customerType === "individual" || customerType === "company");
+    if(customerType === "company"){
+      var vatEl = document.getElementById("qc-vat");
+      set("vat", vatEl && vatEl.value.trim().length >= 3);
+    } else {
+      var vatWrap = document.getElementById("qc-field-vat");
+      if(vatWrap) vatWrap.classList.remove("qc-invalid");
+    }
+
     // Validate custom fields
     var cfInputs = document.querySelectorAll("[data-qc-cf]");
     for (var i = 0; i < cfInputs.length; i++) {
@@ -790,11 +874,21 @@ function renderInlinePageScript(): string {
       customFieldsPayload[cf.getAttribute("data-qc-cf")] = (cf.value || "").trim();
     }
 
+    // Read customerType / vatNumber from the radio + VAT input.
+    var ctRadios2 = document.querySelectorAll('input[name="customerType"]');
+    var ctValue = "";
+    for(var ci2=0; ci2<ctRadios2.length; ci2++){
+      if(ctRadios2[ci2].checked){ ctValue = ctRadios2[ci2].value; break; }
+    }
+    var vatVal = document.getElementById("qc-vat");
+
     var body = {
       customerName: document.getElementById("qc-name").value.trim(),
       customerEmail: document.getElementById("qc-email").value.trim(),
       customerPhone: phoneFullNumber,
       message: document.getElementById("qc-message").value.trim(),
+      customerType: ctValue,
+      vatNumber: ctValue === "company" && vatVal ? vatVal.value.trim() : "",
       items: items,
       currency: QC.currency,
       gclid: readGclid(),

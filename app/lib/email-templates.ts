@@ -20,6 +20,8 @@ export const SAMPLE_QUOTE: QuoteWithItems = {
   customerEmail: "jane@example.com",
   customerPhone: "+1 555 123 4567",
   message: "Could you please confirm bulk pricing on these items?",
+  customerType: "company",
+  vatNumber: "BG123456789",
   status: "new",
   internalNotes: "",
   createdAt: new Date(),
@@ -57,6 +59,8 @@ export const TEMPLATE_VARIABLES = [
   "customer_name",
   "customer_email",
   "customer_phone",
+  "customer_type",
+  "vat_number",
   "customer_message",
   "items_table",
   "custom_fields",
@@ -348,10 +352,17 @@ export function buildTemplateVars(
   shopDomain: string,
   itemsFormat: "text" | "html" = "text",
 ): Record<TemplateVariable, string> {
+  const customerType = quote.customerType
+    ? quote.customerType === "company"
+      ? "Company"
+      : "Individual"
+    : "";
   return {
     customer_name: quote.customerName,
     customer_email: quote.customerEmail,
     customer_phone: quote.customerPhone,
+    customer_type: customerType,
+    vat_number: quote.vatNumber || "",
     customer_message: quote.message || "(no message)",
     items_table: buildItemsTable(quote.items, { format: itemsFormat }),
     custom_fields: buildCustomFieldsTable(quote.customFieldValues || [], itemsFormat),

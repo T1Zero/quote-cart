@@ -16,6 +16,8 @@ export type IncomingQuote = {
   customerEmail: string;
   customerPhone: string;
   message?: string;
+  customerType?: string;  // "individual" | "company" | ""
+  vatNumber?: string;
   items: IncomingQuoteItem[];
 };
 
@@ -37,6 +39,23 @@ export function validateIncomingQuote(input: IncomingQuote): ValidationError[] {
   }
   if (!input.customerPhone || !PHONE_RE.test(input.customerPhone.trim())) {
     errors.push({ field: "customerPhone", message: "Please enter a valid phone number." });
+  }
+  // Customer type is required so we know whether to expect a VAT number.
+  if (
+    input.customerType !== "individual" &&
+    input.customerType !== "company"
+  ) {
+    errors.push({
+      field: "customerType",
+      message: "Please tell us whether you're an individual or a company.",
+    });
+  }
+  // VAT is required only when the customer is a company.
+  if (input.customerType === "company" && (!input.vatNumber || input.vatNumber.trim().length < 3)) {
+    errors.push({
+      field: "vatNumber",
+      message: "Please enter your company VAT / tax number.",
+    });
   }
   if (!Array.isArray(input.items) || input.items.length === 0) {
     errors.push({ field: "items", message: "Your quote is empty. Add at least one product." });
@@ -66,6 +85,11 @@ export async function persistQuote(
       customerEmail: input.customerEmail.trim(),
       customerPhone: input.customerPhone.trim(),
       message: (input.message || "").trim(),
+      customerType:
+        input.customerType === "company" || input.customerType === "individual"
+          ? input.customerType
+          : "",
+      vatNumber: input.customerType === "company" ? (input.vatNumber || "").trim() : "",
       items: {
         create: input.items.map((it) => ({
           productId: String(it.productId),

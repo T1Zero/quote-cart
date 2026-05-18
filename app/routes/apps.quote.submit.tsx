@@ -63,6 +63,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     customerEmail: String(body.customerEmail || ""),
     customerPhone: String(body.customerPhone || ""),
     message: String(body.message || ""),
+    customerType: String((body as { customerType?: string }).customerType || ""),
+    vatNumber: String((body as { vatNumber?: string }).vatNumber || ""),
     items: Array.isArray(body.items) ? body.items : [],
   };
   const errors = validateIncomingQuote(incoming);
