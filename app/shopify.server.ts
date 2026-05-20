@@ -7,12 +7,23 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 
+// Defensive: env vars on production hosts are often pasted without a protocol
+// (e.g., "quote-cart.up.railway.app"). Auto-prepend https:// so the Shopify
+// SDK doesn't crash the boot with "Invalid appUrl configuration".
+function normalizeAppUrl(raw: string | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
   apiVersion: ApiVersion.January25,
   scopes: process.env.SCOPES?.split(","),
-  appUrl: process.env.SHOPIFY_APP_URL || "",
+  appUrl: normalizeAppUrl(process.env.SHOPIFY_APP_URL),
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
