@@ -728,12 +728,28 @@ function renderInlinePageScript(): string {
     }
     set("name", name.value.trim().length >= 2);
     set("email", /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value.trim()));
-    // If intl-tel-input is active, prefer its validation; otherwise fall back to length check.
-    var phoneOk;
-    if (phoneIti && typeof phoneIti.isValidNumber === "function") {
-      phoneOk = phoneIti.isValidNumber();
-    } else {
-      phoneOk = phone.value.trim().length >= 6;
+    // Phone validation — lenient. isValidNumber is overly strict and can flag
+    // real Bulgarian / international numbers as invalid. Layered fallback:
+    //   1. isValidNumber (strictest — perfect match for country format)
+    //   2. isPossibleNumber (length-based — accepts most realistic numbers)
+    //   3. Raw digit count (6+ digits is good enough for a quote form)
+    var phoneRaw = phone.value.trim();
+    var digitCount = (phoneRaw.match(/\\d/g) || []).length;
+    var phoneOk = false;
+    if (digitCount >= 6) {
+      if (phoneIti) {
+        if (typeof phoneIti.isValidNumber === "function" && phoneIti.isValidNumber()) {
+          phoneOk = true;
+        } else if (typeof phoneIti.isPossibleNumber === "function" && phoneIti.isPossibleNumber()) {
+          phoneOk = true;
+        } else {
+          // Library says no, but we have 6+ digits — accept anyway. The merchant can
+          // double-check and reach out manually if the number turns out malformed.
+          phoneOk = true;
+        }
+      } else {
+        phoneOk = true;
+      }
     }
     set("phone", phoneOk);
 
