@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { getOrInitTrackingSettings } from "../lib/tracking.server";
@@ -32,12 +33,7 @@ function debugSignature(request: Request) {
     const signedPayload = params.map(([k, v]) => `${k}=${v}`).join("");
     const secret = process.env.SHOPIFY_API_SECRET || "";
 
-    // Use Node's crypto without an import at module scope (keep this file's
-    // existing exports clean). Dynamic require is fine in a debug path.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const crypto = require("node:crypto");
-    const computed = crypto
-      .createHmac("sha256", secret)
+    const computed = createHmac("sha256", secret)
       .update(signedPayload)
       .digest("hex");
 
