@@ -17,7 +17,48 @@ import {
  * the server can't render them — we ship the page shell + contact form and
  * let the inline script hydrate from `localStorage`.
  */
+// TEMPORARY DEBUG — log everything about the incoming request and compute the
+// signature manually so we can pinpoint why the SDK's verify is failing. Remove
+// once the App Proxy works again.
+function debugSignature(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const receivedSig = url.searchParams.get("signature") || "";
+    const params: [string, string][] = [];
+    url.searchParams.forEach((v, k) => {
+      if (k !== "signature") params.push([k, v]);
+    });
+    params.sort((a, b) => a[0].localeCompare(b[0]));
+    const signedPayload = params.map(([k, v]) => `${k}=${v}`).join("");
+    const secret = process.env.SHOPIFY_API_SECRET || "";
+
+    // Use Node's crypto without an import at module scope (keep this file's
+    // existing exports clean). Dynamic require is fine in a debug path.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const crypto = require("node:crypto");
+    const computed = crypto
+      .createHmac("sha256", secret)
+      .update(signedPayload)
+      .digest("hex");
+
+    // eslint-disable-next-line no-console
+    console.log(
+      "[QC proxy debug]",
+      "url:", url.pathname + url.search.slice(0, 200),
+      "| received_sig:", receivedSig,
+      "| computed_sig:", computed,
+      "| match:", computed === receivedSig,
+      "| secret_len:", secret.length,
+      "| signed_payload:", signedPayload.slice(0, 300),
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.log("[QC proxy debug] failed:", err);
+  }
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  debugSignature(request);
   const { liquid, session } = await authenticate.public.appProxy(request);
 
   const shopDomain = session?.shop || new URL(request.url).searchParams.get("shop") || "";
