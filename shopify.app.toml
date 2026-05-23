@@ -12,9 +12,9 @@ scopes = "read_products,write_products,write_draft_orders,read_customers,write_c
 
 [auth]
 redirect_urls = [
-  "https://quote-cart-production.up.railway.app/auth/callback",
-  "https://quote-cart-production.up.railway.app/auth/shopify/callback",
-  "https://quote-cart-production.up.railway.app/api/auth/callback"
+  "https://quote-cart-extension-production.up.railway.app/auth/callback",
+  "https://quote-cart-extension-production.up.railway.app/auth/shopify/callback",
+  "https://quote-cart-extension-production.up.railway.app/api/auth/callback"
 ]
 
 [webhooks]
@@ -30,7 +30,7 @@ api_version = "2026-07"
 
 # App Proxy: storefront /apps/quote -> our Remix routes /apps/quote and /apps/quote/submit.
 [app_proxy]
-url = "https://quote-cart-production.up.railway.app/apps/quote"
+url = "https://quote-cart-extension-production.up.railway.app/apps/quote"
 prefix = "apps"
 subpath = "quote"
 
