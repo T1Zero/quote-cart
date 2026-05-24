@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "1bc558b8470985fa5af4526037dfba3"
+client_id = "1bc558b8470985fa5af4526037dfba32"
 name = "QuoteCart Live"
 application_url = "https://quote-cart-production.up.railway.app"
 embedded = true
