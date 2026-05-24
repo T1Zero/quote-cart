@@ -18,20 +18,6 @@ function normalizeAppUrl(raw: string | undefined): string {
   return `https://${trimmed}`;
 }
 
-// Debug — print env-var sanity info on boot. Lets us confirm what the
-// container actually loaded vs. what's in Partners. Remove after the
-// signature mismatch is resolved.
-const _secret = process.env.SHOPIFY_API_SECRET || "";
-const _key = process.env.SHOPIFY_API_KEY || "";
-// eslint-disable-next-line no-console
-console.log(
-  "[QuoteCart boot] api_key first 8:", _key.slice(0, 8),
-  "| api_secret length:", _secret.length,
-  "| api_secret first 6:", _secret.slice(0, 6),
-  "| api_secret last 4:", _secret.slice(-4),
-  "| trimmed length:", _secret.trim().length,
-);
-
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",

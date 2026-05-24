@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { getOrInitTrackingSettings } from "../lib/tracking.server";
@@ -18,43 +17,7 @@ import {
  * the server can't render them — we ship the page shell + contact form and
  * let the inline script hydrate from `localStorage`.
  */
-// TEMPORARY DEBUG — log everything about the incoming request and compute the
-// signature manually so we can pinpoint why the SDK's verify is failing. Remove
-// once the App Proxy works again.
-function debugSignature(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const receivedSig = url.searchParams.get("signature") || "";
-    const params: [string, string][] = [];
-    url.searchParams.forEach((v, k) => {
-      if (k !== "signature") params.push([k, v]);
-    });
-    params.sort((a, b) => a[0].localeCompare(b[0]));
-    const signedPayload = params.map(([k, v]) => `${k}=${v}`).join("");
-    const secret = process.env.SHOPIFY_API_SECRET || "";
-
-    const computed = createHmac("sha256", secret)
-      .update(signedPayload)
-      .digest("hex");
-
-    // eslint-disable-next-line no-console
-    console.log(
-      "[QC proxy debug]",
-      "url:", url.pathname + url.search.slice(0, 200),
-      "| received_sig:", receivedSig,
-      "| computed_sig:", computed,
-      "| match:", computed === receivedSig,
-      "| secret_len:", secret.length,
-      "| signed_payload:", signedPayload.slice(0, 300),
-    );
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log("[QC proxy debug] failed:", err);
-  }
-}
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  debugSignature(request);
   const { liquid, session } = await authenticate.public.appProxy(request);
 
   const shopDomain = session?.shop || new URL(request.url).searchParams.get("shop") || "";
