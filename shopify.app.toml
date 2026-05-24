@@ -2,7 +2,7 @@
 
 client_id = "b62160b04b2ee1266c1d09c7f5cfc3d6"
 name = "QuoteCart"
-application_url = "https://quote-cart-extension-production.up.railway.app"
+application_url = "https://quote-cart-production.up.railway.app"
 embedded = true
 
 [access_scopes]
