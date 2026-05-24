@@ -1,18 +1,20 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "1bc558b8470985fa5af4526037dfba32"
-name = "QuoteCart Live"
+client_id = "a8b73314496cbebe6d53023f62ef8f95"
 application_url = "https://example.com"
 embedded = true
-
-[webhooks]
-api_version = "2026-04"
+name = "QuoteCart Live"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = ""
-optional_scopes = [ ]
-use_legacy_install_flow = false
+scopes = "read_customers,read_products,write_customers,write_draft_orders,write_products"
 
 [auth]
-redirect_urls = [ ]
+redirect_urls = [ "https://example.com/api/auth" ]
+
+[webhooks]
+api_version = "2026-07"
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
