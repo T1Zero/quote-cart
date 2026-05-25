@@ -27,7 +27,6 @@ export type ValidationError = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^[+0-9\s().-]{6,}$/;
 
 export function validateIncomingQuote(input: IncomingQuote): ValidationError[] {
   const errors: ValidationError[] = [];
@@ -37,8 +36,8 @@ export function validateIncomingQuote(input: IncomingQuote): ValidationError[] {
   if (!input.customerEmail || !EMAIL_RE.test(input.customerEmail.trim())) {
     errors.push({ field: "customerEmail", message: "Please enter a valid email address." });
   }
-  if (!input.customerPhone || !PHONE_RE.test(input.customerPhone.trim())) {
-    errors.push({ field: "customerPhone", message: "Please enter a valid phone number." });
+  if (!input.customerPhone || !input.customerPhone.trim()) {
+    errors.push({ field: "customerPhone", message: "Please enter your phone number." });
   }
   // Customer type is required so we know whether to expect a VAT number.
   if (

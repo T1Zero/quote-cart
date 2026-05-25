@@ -728,30 +728,7 @@ function renderInlinePageScript(): string {
     }
     set("name", name.value.trim().length >= 2);
     set("email", /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value.trim()));
-    // Phone validation — lenient. isValidNumber is overly strict and can flag
-    // real Bulgarian / international numbers as invalid. Layered fallback:
-    //   1. isValidNumber (strictest — perfect match for country format)
-    //   2. isPossibleNumber (length-based — accepts most realistic numbers)
-    //   3. Raw digit count (6+ digits is good enough for a quote form)
-    var phoneRaw = phone.value.trim();
-    var digitCount = (phoneRaw.match(/\\d/g) || []).length;
-    var phoneOk = false;
-    if (digitCount >= 6) {
-      if (phoneIti) {
-        if (typeof phoneIti.isValidNumber === "function" && phoneIti.isValidNumber()) {
-          phoneOk = true;
-        } else if (typeof phoneIti.isPossibleNumber === "function" && phoneIti.isPossibleNumber()) {
-          phoneOk = true;
-        } else {
-          // Library says no, but we have 6+ digits — accept anyway. The merchant can
-          // double-check and reach out manually if the number turns out malformed.
-          phoneOk = true;
-        }
-      } else {
-        phoneOk = true;
-      }
-    }
-    set("phone", phoneOk);
+    set("phone", phone.value.trim().length > 0);
 
     // Customer type: must be picked. VAT: required if "company".
     var ctRadios = document.querySelectorAll('input[name="customerType"]');
@@ -878,9 +855,13 @@ function renderInlinePageScript(): string {
     btn.textContent = QC.strings.sending;
 
     // Use the full international number from intl-tel-input when available.
-    var phoneFullNumber = (phoneIti && typeof phoneIti.getNumber === "function")
+    // getNumber() can return "" when the lib thinks the number is malformed,
+    // so always fall back to whatever the customer typed.
+    var phoneRawValue = document.getElementById("qc-phone").value.trim();
+    var phoneFromLib = (phoneIti && typeof phoneIti.getNumber === "function")
       ? phoneIti.getNumber()
-      : document.getElementById("qc-phone").value.trim();
+      : "";
+    var phoneFullNumber = phoneFromLib || phoneRawValue;
 
     // Collect custom field values into an object keyed by field id.
     var customFieldsPayload = {};
