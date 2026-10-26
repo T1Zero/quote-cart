@@ -100,7 +100,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await saveValuesForQuote(quote.id, customValidation.values);
   }
   const value = calculateQuoteValue(quote.items);
-  const currency = (body.currency || "USD").toUpperCase();
+  const currency = (body.currency || "EUR").toUpperCase();
   const eventId = generateEventId();
 
   const ip = clientIp(request);

@@ -27,7 +27,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const rawFields = shopDomain ? await listCustomFields(shopDomain) : [];
 
   const url = new URL(request.url);
-  const currency = (url.searchParams.get("c") || "USD").toUpperCase();
+  const currency = (url.searchParams.get("c") || "EUR").toUpperCase();
   const lang = (url.searchParams.get("lang") || "en").toLowerCase();
   const t = lang === "bg" ? STRINGS.bg : STRINGS.en;
 
@@ -606,7 +606,7 @@ function renderInlinePageScript(): string {
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }catch(e){}
   }
   function fmtMoney(n){
-    return (QC.currency || "USD") + " " + (Number(n)||0).toFixed(2);
+    return (QC.currency || "EUR") + " " + (Number(n)||0).toFixed(2);
   }
   function readGclid(){
     try{
