@@ -84,7 +84,7 @@
   // ----- Money helper -----
   function fmt(n) {
     var num = Number(n) || 0;
-    var currency = CONFIG.shopCurrency || "USD";
+    var currency = CONFIG.shopCurrency || "EUR";
     try {
       return new Intl.NumberFormat(CONFIG.locale || undefined, {
         style: "currency",
